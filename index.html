@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Karte Pro (Bibliothek & Excel)</title>
+    <title>Quiz Karte Pro (Cloud Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Rye&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
@@ -28,20 +28,32 @@
             animation: pulse-red 1.5s infinite;
             border-color: #ef4444 !important;
         }
-        /* Scrollbar für Tabelle */
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Loading Overlay */
+        #loadingOverlay {
+            backdrop-filter: blur(5px);
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen flex flex-col items-center py-10 font-sans">
 
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-600 mb-4"></div>
+        <p id="loadingText" class="text-amber-800 font-bold text-lg">Verbinde mit Cloud...</p>
+    </div>
+
     <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-4xl border border-gray-200 relative z-10 mb-10">
-        <h1 class="text-3xl font-bold text-center text-amber-800 mb-6 font-['Rye']">Quiz-Karten Generator Pro</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-amber-800 font-['Rye']">Quiz-Generator <span class="text-sm font-sans bg-amber-100 text-amber-800 px-2 py-1 rounded-full align-middle">Cloud</span></h1>
+            <div id="userStatus" class="text-xs text-gray-400">Offline</div>
+        </div>
 
         <div id="statusMessage" class="bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded-lg mb-6 text-center text-sm">
-            Suche nach Vorlage...
+            System initialisiert...
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -69,7 +81,7 @@
 
                 <div class="grid grid-cols-2 gap-3 mt-auto">
                     <button id="addToLibBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
-                        <span>💾</span> In Bibliothek speichern
+                        <span>☁️</span> In Cloud speichern
                     </button>
                     <button id="copyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
                         <span>📋</span> Kopieren
@@ -89,7 +101,7 @@
 
     <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-4xl border border-gray-200 relative z-10">
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <h2 class="text-2xl font-bold text-gray-800 font-['Rye']">Meine Karten-Bibliothek</h2>
+            <h2 class="text-2xl font-bold text-gray-800 font-['Rye']">Meine Cloud-Bibliothek</h2>
             
             <div class="flex gap-2">
                 <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden" />
@@ -108,7 +120,7 @@
         </div>
 
         <div class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded border border-gray-200">
-            <strong>Excel Format:</strong> Spalte A: "Titel", Spalte B: "Frage", Spalte C: "Antwort". Erste Zeile ist Überschrift.
+            <strong>Hinweis:</strong> Alle Daten werden sicher in deiner persönlichen Cloud-Datenbank gespeichert.
         </div>
 
         <div class="overflow-x-auto custom-scrollbar border border-gray-200 rounded-lg max-h-[500px]">
@@ -122,7 +134,7 @@
                 </thead>
                 <tbody id="libraryList" class="bg-white divide-y divide-gray-200">
                     <tr>
-                        <td colspan="3" class="px-6 py-4 text-center text-gray-400">Bibliothek ist leer.</td>
+                        <td colspan="3" class="px-6 py-4 text-center text-gray-400">Lade Daten...</td>
                     </tr>
                 </tbody>
             </table>
@@ -134,25 +146,14 @@
         <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 hover:bg-red-600 rounded-full p-3 transition">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-
-        <div class="absolute top-5 left-5 text-gray-400 font-mono text-sm">
-            <span id="slideCounter">0</span> verbleibend
-        </div>
-
+        <div class="absolute top-5 left-5 text-gray-400 font-mono text-sm"><span id="slideCounter">0</span> verbleibend</div>
         <div class="relative w-full max-w-4xl p-4 flex flex-col items-center">
             <canvas id="slideshowCanvas" class="max-w-full max-h-[80vh] shadow-2xl border-4 border-gray-800 rounded-lg"></canvas>
-            
             <div class="mt-8 flex gap-4">
-                <button id="revealBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg">
-                    Antwort zeigen
-                </button>
-                <button id="nextSlideBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg hidden">
-                    Nächste Karte ➜
-                </button>
+                <button id="revealBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg">Antwort zeigen</button>
+                <button id="nextSlideBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg hidden">Nächste Karte ➜</button>
             </div>
-            <div id="slideshowEndMsg" class="hidden text-white text-2xl font-bold mt-4 animate-bounce">
-                🎉 Alle Karten erledigt!
-            </div>
+            <div id="slideshowEndMsg" class="hidden text-white text-2xl font-bold mt-4 animate-bounce">🎉 Alle Karten erledigt!</div>
         </div>
     </div>
 
@@ -160,20 +161,9 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
             <h3 class="text-lg font-bold mb-4">Karte bearbeiten</h3>
             <input type="hidden" id="editId">
-            
-            <div class="mb-3">
-                <label class="block text-xs font-bold text-gray-500">Titel</label>
-                <input type="text" id="editTitle" class="w-full p-2 border rounded">
-            </div>
-            <div class="mb-3">
-                <label class="block text-xs font-bold text-gray-500">Frage</label>
-                <textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea>
-            </div>
-            <div class="mb-3">
-                <label class="block text-xs font-bold text-gray-500">Antwort</label>
-                <input type="text" id="editAnswer" class="w-full p-2 border rounded">
-            </div>
-
+            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Titel</label><input type="text" id="editTitle" class="w-full p-2 border rounded"></div>
+            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Frage</label><textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea></div>
+            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Antwort</label><input type="text" id="editAnswer" class="w-full p-2 border rounded"></div>
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded text-sm font-bold">Abbrechen</button>
                 <button onclick="saveEdit()" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-amber-700">Speichern</button>
@@ -181,80 +171,314 @@
         </div>
     </div>
 
-    <script>
-        // DOM ELEMENTS
-        const questionInput = document.getElementById('questionInput');
-        const answerInput = document.getElementById('answerInput');
-        const canvas = document.getElementById('memeCanvas');
-        const ctx = canvas.getContext('2d');
-        const statusMsg = document.getElementById('statusMessage');
-        const libraryList = document.getElementById('libraryList');
-        const libraryCount = document.getElementById('libraryCount');
+    <script type="module">
+        // --- 1. FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Slideshow Elements
-        const slideshowModal = document.getElementById('slideshowModal');
-        const slideshowCanvas = document.getElementById('slideshowCanvas');
-        const ssCtx = slideshowCanvas.getContext('2d');
-        const revealBtn = document.getElementById('revealBtn');
-        const nextSlideBtn = document.getElementById('nextSlideBtn');
-        const slideCounter = document.getElementById('slideCounter');
-        const slideshowEndMsg = document.getElementById('slideshowEndMsg');
+        // --- 2. DEINE KONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyAZmsB0nlIeLVomNqimi7BQwPaHjfYqzUY",
+          authDomain: "quizkarten.firebaseapp.com",
+          projectId: "quizkarten",
+          storageBucket: "quizkarten.firebasestorage.app",
+          messagingSenderId: "1079977423120",
+          appId: "1:1079977423120:web:5cafdecfdbe9d67d807595",
+          measurementId: "G-FWTG0GMBLK"
+        };
 
-        // --- GLOBAL SETTINGS ---
+        // --- 3. INITIALISIERUNG ---
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase initialisiert");
+        } catch (e) {
+            console.error("Firebase Fehler:", e);
+            document.getElementById('statusMessage').innerHTML = `❌ <b>Fehler:</b> Konnte Firebase nicht starten. Siehe Konsole.`;
+            document.getElementById('statusMessage').className = "bg-red-100 text-red-700 p-4 rounded mb-6 text-center border border-red-300";
+        }
+
+        // Globale Variablen für UI
+        let currentCards = []; // Lokale Kopie der Cloud-Daten für UI & Slideshow
+        let currentUser = null;
         const FILENAME = '1000133550-removebg-preview.png'; 
         let templateImage = new Image();
-        let cards = []; // Array of {id, title, question, answer, date}
 
-        // --- INITIALIZATION ---
-        templateImage.src = FILENAME;
-        statusMsg.textContent = `Suche nach "${FILENAME}"...`;
+        // DOM Elemente
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const statusMsg = document.getElementById('statusMessage');
+        const canvas = document.getElementById('memeCanvas');
+        const ctx = canvas.getContext('2d');
+        const questionInput = document.getElementById('questionInput');
+        const answerInput = document.getElementById('answerInput');
+
+        // --- 4. APP START & MIGRATION LOGIC ---
         
-        templateImage.onload = function() {
+        templateImage.src = FILENAME;
+        templateImage.onload = () => {
             canvas.width = templateImage.width;
             canvas.height = templateImage.height;
-            // Setup Slideshow Canvas Dimensions same as original
-            slideshowCanvas.width = templateImage.width;
-            slideshowCanvas.height = templateImage.height;
-
-            statusMsg.textContent = "✅ System bereit";
-            statusMsg.className = "bg-green-100 text-green-700 border border-green-200 p-2 rounded-lg mb-6 text-center text-sm font-semibold";
-            drawCanvas(ctx, questionInput.value, answerInput.value);
-            loadLibrary();
+            document.getElementById('slideshowCanvas').width = templateImage.width;
+            document.getElementById('slideshowCanvas').height = templateImage.height;
+            drawCanvas(ctx, "", "");
+            
+            // Erst wenn Bild da ist, Auth starten
+            if(auth) startAuthFlow();
+        };
+        templateImage.onerror = () => {
+            statusMsg.innerHTML = `⚠️ <b>Bild fehlt:</b> Bitte lege <code>${FILENAME}</code> in denselben Ordner.`;
+            statusMsg.className = "bg-red-50 text-red-600 border border-red-200 p-3 rounded mb-6 text-center";
         };
 
-        templateImage.onerror = function() {
-            statusMsg.innerHTML = `⚠️ <b>Bild fehlt:</b> Bitte lege dein Bild exakt unter dem Namen: <br><code>${FILENAME}</code><br> in denselben Ordner.`;
-            statusMsg.className = "bg-red-50 text-red-600 border border-red-200 p-3 rounded-lg mb-6 text-center text-sm break-all";
-        };
+        function startAuthFlow() {
+            loadingOverlay.classList.remove('hidden');
+            
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    console.log("Angemeldet als:", user.uid);
+                    document.getElementById('userStatus').textContent = `User: ${user.uid.slice(0,5)}... (Anon)`;
+                    
+                    // 1. MIGRATIONS-CHECK: Haben wir noch alte LocalStorage Daten?
+                    await checkAndMigrateLocalStorage();
 
-        // --- CANVAS LOGIC (REUSABLE) ---
+                    // 2. LISTEN: Echtzeit-Verbindung zur DB aufbauen
+                    subscribeToData();
+
+                } else {
+                    // Nicht eingeloggt -> Anonym einloggen
+                    console.log("Logge anonym ein...");
+                    await signInAnonymously(auth).catch(e => {
+                        console.error("Auth Fehler:", e);
+                        loadingText.textContent = "Fehler bei der Anmeldung.";
+                    });
+                }
+            });
+        }
+
+        async function checkAndMigrateLocalStorage() {
+            const localDataStr = localStorage.getItem('quizCardsPro');
+            if (!localDataStr) {
+                loadingOverlay.classList.add('hidden');
+                return; // Nichts zu tun
+            }
+
+            const localData = JSON.parse(localDataStr);
+            if (localData.length === 0) {
+                 loadingOverlay.classList.add('hidden');
+                 return;
+            }
+
+            // MIGRATION STARTEN
+            loadingText.textContent = `Migriere ${localData.length} Karten in die Cloud...`;
+            console.log("Starte Migration von lokalen Daten...");
+
+            const batch = writeBatch(db);
+            const userCol = collection(db, "users", currentUser.uid, "cards");
+
+            localData.forEach(item => {
+                const newRef = doc(userCol); // Auto-ID generieren
+                batch.set(newRef, {
+                    title: item.title || "Importiert",
+                    question: item.question,
+                    answer: item.answer,
+                    createdAt: item.date || new Date().toISOString()
+                });
+            });
+
+            try {
+                await batch.commit();
+                console.log("Migration erfolgreich!");
+                
+                // Lokal löschen, da jetzt in Cloud
+                localStorage.removeItem('quizCardsPro');
+                
+                statusMsg.textContent = `✅ Erfolgreich ${localData.length} alte Karten in die Cloud verschoben!`;
+                statusMsg.className = "bg-green-100 text-green-700 border border-green-200 p-3 rounded mb-6 text-center";
+                setTimeout(() => {
+                    statusMsg.textContent = "✅ System bereit (Cloud Mode)";
+                    statusMsg.className = "bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded mb-6 text-center";
+                }, 4000);
+
+            } catch (err) {
+                console.error("Migration fehlgeschlagen", err);
+                alert("Fehler beim Hochladen der alten Daten. Bitte Internet prüfen.");
+            }
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function subscribeToData() {
+            // Echtzeit-Listener: Feuert jedes Mal, wenn sich in der DB etwas ändert
+            const q = query(collection(db, "users", currentUser.uid, "cards"), orderBy("createdAt", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                currentCards = [];
+                snapshot.forEach((doc) => {
+                    currentCards.push({ id: doc.id, ...doc.data() });
+                });
+                renderLibrary();
+                document.getElementById('libraryCount').textContent = `${currentCards.length} Karten in Cloud`;
+                
+                // Overlay ausblenden falls noch an (passiert beim ersten Load)
+                loadingOverlay.classList.add('hidden');
+            }, (error) => {
+                console.error("Datenbank Fehler:", error);
+            });
+        }
+
+        // --- 5. UI FUNKTIONEN (Angepasst an Window-Scope für HTML Buttons) ---
+
+        // Render Library
+        function renderLibrary() {
+            const list = document.getElementById('libraryList');
+            list.innerHTML = '';
+            
+            if (currentCards.length === 0) {
+                list.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Deine Cloud-Bibliothek ist leer.</td></tr>`;
+                return;
+            }
+
+            currentCards.forEach(card => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[150px]">${card.title}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 overflow-hidden text-ellipsis max-w-[250px]">${card.question}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="window.downloadSingle('${card.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Bild laden">⬇️</button>
+                        <button onclick="window.editSingle('${card.id}')" class="text-amber-600 hover:text-amber-900 mr-3" title="Bearbeiten">✏️</button>
+                        <button onclick="window.deleteSingle('${card.id}')" class="text-red-600 hover:text-red-900" title="Löschen">🗑️</button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        // Add New (Save to Cloud)
+        document.getElementById('addToLibBtn').addEventListener('click', async () => {
+            if(!currentUser) return alert("Warte auf Verbindung...");
+            const q = questionInput.value.trim();
+            const a = answerInput.value.trim();
+            if (!q || !a) return alert("Bitte ausfüllen.");
+
+            const title = q.substring(0, 20).replace(/[^a-zA-Z0-9 ]/g, "") || "Neue Karte";
+            const btn = document.getElementById('addToLibBtn');
+            const oldText = btn.innerHTML;
+            btn.innerHTML = "⏳ Speichere...";
+            
+            try {
+                await addDoc(collection(db, "users", currentUser.uid, "cards"), {
+                    title: title,
+                    question: q,
+                    answer: a,
+                    createdAt: new Date().toISOString()
+                });
+                btn.innerHTML = "✅ In Cloud!";
+                setTimeout(() => btn.innerHTML = oldText, 1500);
+            } catch (e) {
+                console.error(e);
+                alert("Fehler beim Speichern: " + e.message);
+                btn.innerHTML = oldText;
+            }
+        });
+
+        // Delete (Cloud)
+        window.deleteSingle = async (id) => {
+            if(!confirm("Wirklich aus der Cloud löschen?")) return;
+            try {
+                await deleteDoc(doc(db, "users", currentUser.uid, "cards", id));
+            } catch(e) { alert("Löschen fehlgeschlagen: " + e.message); }
+        }
+
+        // Edit (Cloud)
+        window.editSingle = (id) => {
+            const card = currentCards.find(c => c.id === id);
+            if(!card) return;
+            document.getElementById('editId').value = id;
+            document.getElementById('editTitle').value = card.title;
+            document.getElementById('editQuestion').value = card.question;
+            document.getElementById('editAnswer').value = card.answer;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        window.saveEdit = async () => {
+            const id = document.getElementById('editId').value;
+            try {
+                await updateDoc(doc(db, "users", currentUser.uid, "cards", id), {
+                    title: document.getElementById('editTitle').value,
+                    question: document.getElementById('editQuestion').value,
+                    answer: document.getElementById('editAnswer').value
+                });
+                document.getElementById('editModal').classList.add('hidden');
+            } catch(e) { alert("Update fehlgeschlagen."); }
+        }
+
+        // Excel Import (Direct to Cloud)
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file || !currentUser) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: ["title", "question", "answer"], range: 1}); 
+                
+                if(!confirm(`${jsonData.length} Karten gefunden. In Cloud importieren?`)) return;
+
+                const batch = writeBatch(db);
+                let count = 0;
+                jsonData.forEach(row => {
+                    if(row.question && row.answer) {
+                        const newRef = doc(collection(db, "users", currentUser.uid, "cards"));
+                        batch.set(newRef, {
+                            title: row.title || "Excel Import",
+                            question: row.question,
+                            answer: row.answer,
+                            createdAt: new Date().toISOString()
+                        });
+                        count++;
+                    }
+                });
+
+                await batch.commit();
+                alert(`${count} Karten importiert!`);
+                document.getElementById('excelInput').value = ''; 
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Export Excel (From Cloud Data)
+        window.exportToExcel = () => {
+            if(currentCards.length === 0) return alert("Nichts zu exportieren.");
+            const dataToExport = currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer }));
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "QuizKarten");
+            XLSX.writeFile(wb, "Meine_Cloud_Karten.xlsx");
+        }
+
+        // --- HELPER FUNCTIONS (Canvas, Dictation, Slideshow) ---
+        // Diese bleiben fast identisch, nutzen aber "currentCards"
+
         function drawCanvas(context, qText, aText, hideAnswer = false) {
             if (!templateImage.complete || templateImage.naturalWidth === 0) return;
-
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
             context.drawImage(templateImage, 0, 0);
-
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillStyle = '#3e2c1c'; 
+            context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
             
-            const w = context.canvas.width;
-            const h = context.canvas.height;
-
-            // Frage Positionierung
-            const qX = w * 0.5;
-            const qY = h * 0.48; 
-            const qMaxWidth = w * 0.70; 
-            const qFontSize = w * 0.05; 
+            const w = context.canvas.width; const h = context.canvas.height;
+            const qX = w * 0.5; const qY = h * 0.48; const qMaxWidth = w * 0.70; const qFontSize = w * 0.05; 
             
             context.font = `bold ${qFontSize}px "Roboto Slab", "Georgia", serif`;
             wrapText(context, qText, qX, qY, qMaxWidth, qFontSize * 1.3);
 
-            // Antwort Positionierung
             if (!hideAnswer) {
-                const aX = w * 0.5;
-                const aY = h * 0.795; 
-                const aFontSize = w * 0.045; 
+                const aX = w * 0.5; const aY = h * 0.795; const aFontSize = w * 0.045; 
                 context.font = `bold ${aFontSize}px "Roboto Slab", "Georgia", serif`;
                 context.fillText(aText, aX, aY);
             }
@@ -266,8 +490,7 @@
             let line = ''; let lines = [];
             for(let n = 0; n < words.length; n++) {
                 const testLine = line + words[n] + ' ';
-                const metrics = context.measureText(testLine);
-                if (metrics.width > maxWidth && n > 0) { lines.push(line); line = words[n] + ' '; }
+                if (context.measureText(testLine).width > maxWidth && n > 0) { lines.push(line); line = words[n] + ' '; }
                 else { line = testLine; }
             }
             lines.push(line);
@@ -275,273 +498,21 @@
             for(let k = 0; k < lines.length; k++) { context.fillText(lines[k], x, startY + (k * lineHeight)); }
         }
 
-        // Live Preview Update
+        // Event Listener für Live Preview
         questionInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
         answerInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
 
-
-        // --- LIBRARY MANAGEMENT ---
-
-        function loadLibrary() {
-            const saved = localStorage.getItem('quizCardsPro');
-            if (saved) {
-                cards = JSON.parse(saved);
-            }
-            renderLibrary();
-        }
-
-        function saveLibrary() {
-            localStorage.setItem('quizCardsPro', JSON.stringify(cards));
-            renderLibrary();
-        }
-
-        function renderLibrary() {
-            libraryList.innerHTML = '';
-            libraryCount.textContent = `${cards.length} Karten in Bibliothek`;
-
-            if (cards.length === 0) {
-                libraryList.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Bibliothek ist leer. Erstelle eine Karte oder importiere Excel.</td></tr>`;
-                return;
-            }
-
-            // Neueste zuerst
-            const displayCards = [...cards].reverse();
-
-            displayCards.forEach(card => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition";
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[150px]">${card.title}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 overflow-hidden text-ellipsis max-w-[250px]">${card.question}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="downloadSingle('${card.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Bild herunterladen">⬇️</button>
-                        <button onclick="editSingle('${card.id}')" class="text-amber-600 hover:text-amber-900 mr-3" title="Bearbeiten">✏️</button>
-                        <button onclick="deleteSingle('${card.id}')" class="text-red-600 hover:text-red-900" title="Löschen">🗑️</button>
-                    </td>
-                `;
-                libraryList.appendChild(tr);
-            });
-        }
-
-        // Add Current to Library
-        document.getElementById('addToLibBtn').addEventListener('click', () => {
-            const q = questionInput.value.trim();
-            const a = answerInput.value.trim();
-            if (!q || !a) { alert("Bitte Frage und Antwort ausfüllen."); return; }
-
-            // Name generieren
-            let title = q.substring(0, 20).replace(/[^a-zA-Z0-9 ]/g, "") || "Neue Karte";
-            
-            // Check for duplicate question
-            const exists = cards.some(c => c.question === q);
-            if (exists) {
-                if(!confirm("Eine Karte mit dieser Frage existiert bereits. Trotzdem speichern?")) return;
-            }
-
-            const newCard = {
-                id: Date.now().toString(),
-                title: title,
-                question: q,
-                answer: a,
-                date: new Date().toISOString()
-            };
-
-            cards.push(newCard);
-            saveLibrary();
-            
-            // Visuelles Feedback
-            const btn = document.getElementById('addToLibBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = "✅ Gespeichert";
-            setTimeout(() => btn.innerHTML = originalText, 1500);
-        });
-
-        // Delete
-        window.deleteSingle = function(id) {
-            if(confirm("Karte wirklich löschen?")) {
-                cards = cards.filter(c => c.id !== id);
-                saveLibrary();
-            }
-        }
-
-        // Download Single (Generates Image on fly)
-        window.downloadSingle = function(id) {
-            const card = cards.find(c => c.id === id);
-            if(!card) return;
-            
-            // Render on main canvas temporarily
-            drawCanvas(ctx, card.question, card.answer);
-            
-            const link = document.createElement('a');
-            link.download = (card.title || 'quiz_card') + '.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-            // Restore preview
-            drawCanvas(ctx, questionInput.value, answerInput.value);
-        }
-
-        // Edit
-        window.editSingle = function(id) {
-            const card = cards.find(c => c.id === id);
-            if(!card) return;
-            document.getElementById('editId').value = card.id;
-            document.getElementById('editTitle').value = card.title;
-            document.getElementById('editQuestion').value = card.question;
-            document.getElementById('editAnswer').value = card.answer;
-            document.getElementById('editModal').classList.remove('hidden');
-        }
-
-        window.saveEdit = function() {
-            const id = document.getElementById('editId').value;
-            const cardIndex = cards.findIndex(c => c.id === id);
-            if (cardIndex > -1) {
-                cards[cardIndex].title = document.getElementById('editTitle').value;
-                cards[cardIndex].question = document.getElementById('editQuestion').value;
-                cards[cardIndex].answer = document.getElementById('editAnswer').value;
-                saveLibrary();
-                document.getElementById('editModal').classList.add('hidden');
-            }
-        }
-
-        // --- EXCEL IMPORT / EXPORT ---
-
-        document.getElementById('excelInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                // Erwarte Header: Title, Question, Answer (oder A, B, C)
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: ["title", "question", "answer"], range: 1}); 
-                
-                let addedCount = 0;
-                let skipCount = 0;
-
-                jsonData.forEach(row => {
-                    if(!row.question || !row.answer) return;
-                    
-                    // Check duplicate
-                    const exists = cards.some(c => c.question.trim() === row.question.trim());
-                    if (exists) {
-                        skipCount++;
-                    } else {
-                        cards.push({
-                            id: Date.now().toString() + Math.random().toString().substr(2, 5),
-                            title: row.title || "Import " + (addedCount+1),
-                            question: row.question,
-                            answer: row.answer,
-                            date: new Date().toISOString()
-                        });
-                        addedCount++;
-                    }
-                });
-
-                saveLibrary();
-                alert(`Import fertig:\n✅ ${addedCount} hinzugefügt\n⏭️ ${skipCount} übersprungen (Duplikate)`);
-                document.getElementById('excelInput').value = ''; // Reset
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        window.exportToExcel = function() {
-            if(cards.length === 0) { alert("Nichts zu exportieren."); return; }
-            
-            // Format data for simpler excel
-            const dataToExport = cards.map(c => ({
-                Titel: c.title,
-                Frage: c.question,
-                Antwort: c.answer
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(dataToExport);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "QuizKarten");
-            XLSX.writeFile(wb, "Meine_Quiz_Bibliothek.xlsx");
-        }
-
-
-        // --- SLIDESHOW LOGIC ---
-        let slideshowDeck = [];
-        let currentSlideCard = null;
-
-        window.startSlideshow = function() {
-            if(cards.length === 0) { alert("Bibliothek ist leer."); return; }
-            if(!templateImage.complete) { alert("Warte auf Bild..."); return; }
-
-            // Kopie erstellen und mischen (Fisher-Yates Shuffle)
-            slideshowDeck = [...cards];
-            for (let i = slideshowDeck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [slideshowDeck[i], slideshowDeck[j]] = [slideshowDeck[j], slideshowDeck[i]];
-            }
-
-            slideshowModal.classList.remove('hidden');
-            slideshowEndMsg.classList.add('hidden');
-            loadNextSlide();
-        }
-
-        function loadNextSlide() {
-            // Reset UI
-            revealBtn.classList.remove('hidden');
-            nextSlideBtn.classList.add('hidden');
-            
-            if (slideshowDeck.length === 0) {
-                // Ende erreicht
-                ssCtx.fillStyle = "#222";
-                ssCtx.fillRect(0,0, slideshowCanvas.width, slideshowCanvas.height);
-                ssCtx.fillStyle = "white";
-                ssCtx.textAlign = "center";
-                ssCtx.font = "40px sans-serif";
-                ssCtx.fillText("Ende", slideshowCanvas.width/2, slideshowCanvas.height/2);
-                
-                revealBtn.classList.add('hidden');
-                slideshowEndMsg.classList.remove('hidden');
-                slideCounter.textContent = "0";
-                return;
-            }
-
-            slideCounter.textContent = slideshowDeck.length;
-            currentSlideCard = slideshowDeck.pop(); // Remove from stack -> "nur einmal ansehen"
-
-            // Draw Question only
-            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, true); // true = hide answer
-        }
-
-        revealBtn.addEventListener('click', () => {
-            if(!currentSlideCard) return;
-            // Draw with answer
-            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, false);
-            revealBtn.classList.add('hidden');
-            nextSlideBtn.classList.remove('hidden');
-        });
-
-        nextSlideBtn.addEventListener('click', loadNextSlide);
-
-        window.stopSlideshow = function() {
-            slideshowModal.classList.add('hidden');
-        }
-
-
-        // --- DICTATION & UTILS (SAME AS BEFORE) ---
+        // Dictation
         let recognition = null;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
-            recognition.continuous = false;
+            recognition.lang = 'de-DE'; recognition.continuous = false;
         }
-
-        window.toggleDictation = function(inputId, btn) {
-            if (!recognition) { alert("Keine Spracherkennung verfügbar"); return; }
-            
-            // Visual feedback toggle logic simplified for brevity
+        window.toggleDictation = (inputId, btn) => {
+            if (!recognition) return alert("Keine Spracherkennung.");
             btn.classList.add('mic-active');
             recognition.start();
-            
             recognition.onresult = (e) => {
                 document.getElementById(inputId).value = e.results[0][0].transcript;
                 drawCanvas(ctx, questionInput.value, answerInput.value);
@@ -550,20 +521,66 @@
             recognition.onend = () => btn.classList.remove('mic-active');
         }
 
+        // Reset & Copy
         document.getElementById('resetBtn').addEventListener('click', () => {
-            questionInput.value = ''; answerInput.value = '';
-            drawCanvas(ctx, '', '');
+            questionInput.value = ''; answerInput.value = ''; drawCanvas(ctx, '', '');
+        });
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            canvas.toBlob(b => navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(()=>alert("Kopiert!")).catch(()=>alert("Fehler")));
         });
 
-        document.getElementById('copyBtn').addEventListener('click', async function() {
-            canvas.toBlob(async function(blob) {
-                try {
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                    alert("In Zwischenablage kopiert!");
-                } catch (e) { alert("Kopieren fehlgeschlagen."); }
-            });
+        // Slideshow Logic
+        let slideshowDeck = [];
+        let currentSlideCard = null;
+        const ssCanvas = document.getElementById('slideshowCanvas');
+        const ssCtx = ssCanvas.getContext('2d');
+        const revealBtn = document.getElementById('revealBtn');
+        const nextSlideBtn = document.getElementById('nextSlideBtn');
+        const slideshowEndMsg = document.getElementById('slideshowEndMsg');
+        const slideCounter = document.getElementById('slideCounter');
+
+        window.startSlideshow = () => {
+            if(currentCards.length === 0) return alert("Bibliothek leer.");
+            slideshowDeck = [...currentCards].sort(() => Math.random() - 0.5);
+            document.getElementById('slideshowModal').classList.remove('hidden');
+            slideshowEndMsg.classList.add('hidden');
+            loadNextSlide();
+        }
+
+        function loadNextSlide() {
+            revealBtn.classList.remove('hidden'); nextSlideBtn.classList.add('hidden');
+            if (slideshowDeck.length === 0) {
+                ssCtx.fillStyle = "#222"; ssCtx.fillRect(0,0, ssCanvas.width, ssCanvas.height);
+                ssCtx.fillStyle = "white"; ssCtx.textAlign = "center"; ssCtx.font = "40px sans-serif";
+                ssCtx.fillText("Ende", ssCanvas.width/2, ssCanvas.height/2);
+                revealBtn.classList.add('hidden'); slideshowEndMsg.classList.remove('hidden'); slideCounter.textContent = "0";
+                return;
+            }
+            slideCounter.textContent = slideshowDeck.length;
+            currentSlideCard = slideshowDeck.pop();
+            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, true);
+        }
+
+        revealBtn.addEventListener('click', () => {
+            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, false);
+            revealBtn.classList.add('hidden'); nextSlideBtn.classList.remove('hidden');
         });
+        nextSlideBtn.addEventListener('click', loadNextSlide);
+        window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
+        
+        // Download Single Helper
+        window.downloadSingle = (id) => {
+             const card = currentCards.find(c => c.id === id);
+             if(!card) return;
+             drawCanvas(ctx, card.question, card.answer);
+             const link = document.createElement('a');
+             link.download = (card.title||'card')+'.png';
+             link.href = canvas.toDataURL('image/png');
+             link.click();
+             drawCanvas(ctx, questionInput.value, answerInput.value);
+        }
 
     </script>
 </body>
 </html>
+
