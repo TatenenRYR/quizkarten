@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Karte Pro (Shared Spiel)</title>
+    <title>Quiz-Show Offline-Ready</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -14,93 +14,70 @@
         body { background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
         .card-element { background-color: var(--bg-card); border-color: rgba(0,0,0,0.1); }
         .checkerboard { background-color: #eee; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; }
-        .mic-active { background-color: #fee2e2 !important; color: #ef4444 !important; animation: pulse-red 1.5s infinite; border-color: #ef4444 !important; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         #loadingOverlay { backdrop-filter: blur(5px); z-index: 9999; }
+        .hidden-offline { display: block; }
+        .offline .hidden-offline { display: none !important; }
+        .offline-status-banner { display: none; }
+        .offline .offline-status-banner { display: block; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-10 font-sans px-4">
+<body class="min-h-screen flex flex-col items-center py-10 font-sans px-4" id="appBody">
+
+    <div class="offline-status-banner fixed top-0 w-full bg-red-600 text-white text-center py-2 z-[100] font-bold shadow-lg">
+        Offline-Modus: Nur Spielen möglich
+    </div>
 
     <div class="fixed top-4 right-4 flex gap-2 z-50">
         <button onclick="toggleDarkMode()" class="bg-amber-100 text-amber-800 p-2 rounded-full shadow hover:bg-amber-200 transition">🌙</button>
     </div>
 
-    <div id="loadingOverlay" class="fixed inset-0 bg-white/80 flex flex-col items-center justify-center hidden">
-        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-600 mb-4"></div>
-        <p id="loadingText" class="text-amber-800 font-bold">Synchronisiere Spielstand...</p>
-    </div>
-
-    <div class="card-element p-6 rounded-xl shadow-xl w-full max-w-4xl border mb-10">
+    <div class="card-element p-6 rounded-xl shadow-xl w-full max-w-4xl border mb-10 hidden-offline">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-amber-800 font-['Rye']">Quiz-Show <span class="text-xs font-sans bg-green-500 text-white px-2 py-1 rounded-full align-middle ml-2">Live-Spiel</span></h1>
-            <div id="userStatus" class="text-xs opacity-50">Verbinde...</div>
+            <h1 class="text-3xl font-bold text-amber-800 font-['Rye']">Quiz-Show <span class="text-xs font-sans bg-green-500 text-white px-2 py-1 rounded-full align-middle ml-2">Editor</span></h1>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col gap-6">
-                <div>
-                    <label class="block text-sm font-bold mb-1 opacity-75">Frage erstellen</label>
-                    <div class="flex gap-2">
-                        <textarea id="questionInput" rows="2" class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 shadow-sm resize-none" placeholder="Was willst du fragen?"></textarea>
-                        <button onclick="toggleDictation('questionInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border rounded-lg px-3 transition">🎤</button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold mb-1 opacity-75">Antwort festlegen</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="answerInput" class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 shadow-sm" placeholder="Die richtige Lösung...">
-                        <button onclick="toggleDictation('answerInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border rounded-lg px-3 transition">🎤</button>
-                    </div>
-                </div>
+                <textarea id="questionInput" rows="2" class="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 shadow-sm resize-none" placeholder="Frage..."></textarea>
+                <input type="text" id="answerInput" class="p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 shadow-sm" placeholder="Antwort...">
                 <div class="grid grid-cols-2 gap-3 mt-auto">
                     <button id="addToLibBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">☁️ Speichern</button>
                     <button id="copyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">📋 Kopieren</button>
                 </div>
             </div>
-
             <div class="flex flex-col items-center justify-center">
                 <div class="border-2 border-gray-200 rounded-lg overflow-hidden checkerboard shadow-lg bg-white relative w-full">
                     <canvas id="memeCanvas" class="w-full h-auto block"></canvas>
                 </div>
-                <p class="text-xs opacity-40 mt-2 text-center">Live-Vorschau (optimiert für Quiz-Logo)</p>
             </div>
         </div>
     </div>
 
-    <div class="card-element p-6 rounded-xl shadow-xl w-full max-w-4xl border">
-        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <h2 class="text-2xl font-bold font-['Rye']">Spiel-Bibliothek</h2>
-            <div class="flex gap-2">
-                <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden" />
-                <button onclick="document.getElementById('excelInput').click()" class="bg-green-100 text-green-700 px-3 py-2 rounded font-bold text-sm">📤 Import</button>
-                <button onclick="exportToExcel()" class="bg-blue-100 text-blue-700 px-3 py-2 rounded font-bold text-sm">📥 Export</button>
-                <button onclick="startSlideshow()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded font-bold text-sm shadow">🎬 Jetzt Spielen</button>
-            </div>
+    <div class="card-element p-8 rounded-xl shadow-2xl w-full max-w-2xl border text-center">
+        <h2 class="text-3xl font-bold font-['Rye'] mb-6 text-amber-800">Spiel-Bereich</h2>
+        
+        <div id="offlineInfo" class="mb-6 opacity-60 text-sm hidden">
+            <span id="localCount">0</span> Fragen lokal für Offline-Nutzung gespeichert.
         </div>
 
-        <div class="overflow-x-auto custom-scrollbar border rounded-lg max-h-[500px]">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50 dark:bg-slate-800">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase opacity-50">Titel</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase opacity-50">Frage</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase opacity-50">Aktion</th>
-                    </tr>
-                </thead>
-                <tbody id="libraryList" class="divide-y divide-gray-200"></tbody>
-            </table>
+        <button onclick="startSlideshow()" class="bg-amber-500 hover:bg-amber-600 text-white w-full py-6 rounded-2xl font-bold text-2xl shadow-xl transform active:scale-95 transition-all">
+            🎬 JETZT SPIELEN
+        </button>
+
+        <div class="hidden-offline mt-10 border-t pt-6">
+            <h3 class="font-bold mb-4 opacity-75">Cloud-Verwaltung</h3>
+            <div class="flex justify-center gap-4">
+                <button onclick="exportToExcel()" class="text-blue-600 font-bold">📥 Export</button>
+                <button onclick="document.getElementById('excelInput').click()" class="text-green-600 font-bold">📤 Import</button>
+                <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden" />
+            </div>
         </div>
-        <div id="libraryCount" class="text-right text-sm opacity-50 mt-2">0 Fragen im Pool</div>
     </div>
 
     <div id="slideshowModal" class="fixed inset-0 bg-black bg-opacity-95 hidden z-[100] flex flex-col items-center justify-center">
         <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 p-3 rounded-full">✕</button>
-        <div class="absolute top-5 left-5 text-gray-400 font-mono text-sm"><span id="slideCounter">0</span> Fragen verbleibend</div>
         <div class="relative w-full max-w-4xl p-4 flex flex-col items-center">
             <canvas id="slideshowCanvas" class="max-w-full max-h-[75vh] shadow-2xl border-4 border-gray-800 rounded-lg bg-white"></canvas>
-            <div id="slideshowEndMsg" class="hidden text-white text-center mt-4">
-                <h3 class="text-2xl font-bold font-['Rye']">Spiel beendet! 🏆</h3>
-            </div>
             <div class="mt-8 flex gap-4">
                 <button id="revealBtn" class="bg-white text-black font-bold py-3 px-8 rounded-full text-lg shadow-xl">Antwort aufdecken</button>
                 <button id="nextSlideBtn" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-full text-lg shadow-xl hidden">Nächste Frage ➜</button>
@@ -111,15 +88,15 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, query, orderBy, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyAZmsB0nlIeLVomNqimi7BQwPaHjfYqzUY",
-          authDomain: "quizkarten.firebaseapp.com",
-          projectId: "quizkarten",
-          storageBucket: "quizkarten.firebasestorage.app",
-          messagingSenderId: "1079977423120",
-          appId: "1:1079977423120:web:5cafdecfdbe9d67d807595"
+            apiKey: "AIzaSyAZmsB0nlIeLVomNqimi7BQwPaHjfYqzUY",
+            authDomain: "quizkarten.firebaseapp.com",
+            projectId: "quizkarten",
+            storageBucket: "quizkarten.firebasestorage.app",
+            messagingSenderId: "1079977423120",
+            appId: "1:1079977423120:web:5cafdecfdbe9d67d807595"
         };
 
         const MASTER_ID = "bCRGLZAmeOSeqsbTGRJANgXPcxy2";
@@ -127,27 +104,38 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        enableIndexedDbPersistence(db).catch(() => {});
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-        }
-
         let currentCards = [];
         const templateImage = new Image();
         templateImage.src = '1000133550-removebg-preview.png';
         const canvas = document.getElementById('memeCanvas');
         const ctx = canvas.getContext('2d');
 
+        // --- OFFLINE LOGIK ---
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                document.getElementById('appBody').classList.remove('offline');
+            } else {
+                document.getElementById('appBody').classList.add('offline');
+                // Lade lokale Daten wenn offline
+                const local = localStorage.getItem('offline_quiz_data');
+                if(local) currentCards = JSON.parse(local);
+                updateLocalCount();
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
         templateImage.onload = () => {
             canvas.width = templateImage.width; canvas.height = templateImage.height;
             document.getElementById('slideshowCanvas').width = templateImage.width;
             document.getElementById('slideshowCanvas').height = templateImage.height;
             drawCanvas(ctx, "", "");
+            
             onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    document.getElementById('userStatus').textContent = "Spiel synchronisiert";
-                    subscribe();
-                } else signInAnonymously(auth);
+                if (user && navigator.onLine) subscribe();
+                else if (!user && navigator.onLine) signInAnonymously(auth);
             });
         };
 
@@ -155,24 +143,18 @@
             const q = query(collection(db, "users", MASTER_ID, "cards"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snapshot) => {
                 currentCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-                document.getElementById('libraryCount').textContent = `${currentCards.length} Fragen im Spiel`;
+                // BACKUP FÜR OFFLINE
+                localStorage.setItem('offline_quiz_data', JSON.stringify(currentCards));
+                updateLocalCount();
             });
         }
 
-        function render() {
-            const list = document.getElementById('libraryList');
-            list.innerHTML = currentCards.map(c => `
-                <tr class="hover:bg-black/5 transition">
-                    <td class="px-6 py-4 font-medium truncate max-w-[120px]">${c.title}</td>
-                    <td class="px-6 py-4 truncate opacity-60 max-w-[200px]">${c.question}</td>
-                    <td class="px-6 py-4 text-right">
-                        <button onclick="window.downloadSingle('${c.id}')" class="mr-3">⬇️</button>
-                        <button onclick="window.deleteSingle('${c.id}')" class="text-red-500">🗑️</button>
-                    </td>
-                </tr>`).join('');
+        function updateLocalCount() {
+            document.getElementById('localCount').textContent = currentCards.length;
+            document.getElementById('offlineInfo').classList.remove('hidden');
         }
 
+        // --- ZEICHEN LOGIK ---
         function drawCanvas(context, qText, aText, hideAnswer = false) {
             if (!templateImage.complete) return;
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
@@ -180,36 +162,27 @@
             context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
             const w = context.canvas.width; const h = context.canvas.height;
 
-            // Frage (Pfade angepasst: h*0.52 statt 0.48 für Logo-Abstand)
             const qMaxWidth = w * 0.75; const qMaxHeight = h * 0.35; let qFontSize = w * 0.055;
             context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
-            let qLines = getWrappedLines(context, qText, qMaxWidth);
-            while ((qLines.length * qFontSize * 1.3) > qMaxHeight && qFontSize > 10) {
+            
+            let words = qText.split(' '), lines = [], line = '';
+            words.forEach(word => {
+                if(context.measureText(line + word).width > qMaxWidth) { lines.push(line); line = word + ' '; }
+                else line += word + ' ';
+            });
+            lines.push(line);
+
+            while ((lines.length * qFontSize * 1.3) > qMaxHeight && qFontSize > 10) {
                 qFontSize -= 1; context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
-                qLines = getWrappedLines(context, qText, qMaxWidth);
             }
-            let qStartY = (h * 0.52) - (qLines.length * qFontSize * 1.3 / 2) + (qFontSize * 0.65);
-            qLines.forEach((line, i) => context.fillText(line, w * 0.5, qStartY + (i * qFontSize * 1.3)));
+            
+            let qStartY = (h * 0.52) - (lines.length * qFontSize * 1.3 / 2) + (qFontSize * 0.65);
+            lines.forEach((l, i) => context.fillText(l, w * 0.5, qStartY + (i * qFontSize * 1.3)));
 
             if (!hideAnswer && aText) {
-                let aFontSize = w * 0.045; context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
-                while (context.measureText(aText).width > w * 0.75 && aFontSize > 8) {
-                    aFontSize -= 1; context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
-                }
+                context.font = `bold ${w * 0.045}px "Roboto Slab", serif`;
                 context.fillText(aText, w * 0.5, h * 0.795);
             }
-        }
-
-        function getWrappedLines(context, text, maxWidth) {
-            if(!text) return [];
-            const words = text.split(' ');
-            let lines = [], currentLine = words[0];
-            for (let i = 1; i < words.length; i++) {
-                if (context.measureText(currentLine + " " + words[i]).width > maxWidth) {
-                    lines.push(currentLine); currentLine = words[i];
-                } else { currentLine += " " + words[i]; }
-            }
-            lines.push(currentLine); return lines;
         }
 
         document.getElementById('questionInput').oninput = () => drawCanvas(ctx, document.getElementById('questionInput').value, document.getElementById('answerInput').value);
@@ -220,45 +193,23 @@
             const a = document.getElementById('answerInput').value.trim();
             if (!q || !a) return alert("Frage und Antwort fehlen!");
             await addDoc(collection(db, "users", MASTER_ID, "cards"), {
-                title: q.slice(0, 15).replace(/[^a-z0-9 ]/gi, ""),
-                question: q, answer: a, createdAt: new Date().toISOString()
+                title: q.slice(0, 15), question: q, answer: a, createdAt: new Date().toISOString()
             });
             document.getElementById('questionInput').value = ''; document.getElementById('answerInput').value = ''; drawCanvas(ctx, '', '');
         };
 
-        window.deleteSingle = async (id) => { if(confirm("Frage löschen?")) await deleteDoc(doc(db, "users", MASTER_ID, "cards", id)); }
-        window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
-        
-        window.toggleDictation = (inputId, btn) => {
-            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRec) return alert("Nicht unterstützt");
-            const rec = new SpeechRec(); rec.lang = 'de-DE';
-            btn.classList.add('mic-active'); rec.start();
-            rec.onresult = (e) => { 
-                document.getElementById(inputId).value = e.results[0][0].transcript;
-                drawCanvas(ctx, document.getElementById('questionInput').value, document.getElementById('answerInput').value);
-            };
-            rec.onend = () => btn.classList.remove('mic-active');
-        }
-
-        // Diashow (Spielen)
+        // --- SPIEL LOGIK ---
         let ssDeck = []; let curSS = null;
         window.startSlideshow = () => {
-            if(currentCards.length === 0) return;
+            if(currentCards.length === 0) return alert("Keine Fragen geladen!");
             ssDeck = [...currentCards].sort(() => Math.random() - 0.5);
             document.getElementById('slideshowModal').classList.remove('hidden');
-            document.getElementById('slideshowEndMsg').classList.add('hidden');
             loadNext();
         }
         function loadNext() {
             document.getElementById('revealBtn').classList.remove('hidden');
             document.getElementById('nextSlideBtn').classList.add('hidden');
-            if (ssDeck.length === 0) {
-                document.getElementById('revealBtn').classList.add('hidden');
-                document.getElementById('slideshowEndMsg').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('slideCounter').textContent = ssDeck.length;
+            if (ssDeck.length === 0) return stopSlideshow();
             curSS = ssDeck.pop();
             drawCanvas(document.getElementById('slideshowCanvas').getContext('2d'), curSS.question, curSS.answer, true);
         }
@@ -269,12 +220,12 @@
         }
         document.getElementById('nextSlideBtn').onclick = loadNext;
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
-
-        window.downloadSingle = (id) => {
-             const card = currentCards.find(c => c.id === id);
-             drawCanvas(ctx, card.question, card.answer);
-             const link = document.createElement('a'); link.download = 'Frage.png';
-             link.href = canvas.toDataURL('image/png'); link.click();
+        window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
+        
+        window.exportToExcel = () => {
+            const ws = XLSX.utils.json_to_sheet(currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer })));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Quiz");
+            XLSX.writeFile(wb, "Cloud_Backup.xlsx");
         }
     </script>
 </body>
