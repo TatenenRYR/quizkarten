@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Karte Pro (Cloud Sync)</title>
+    <title>Quiz Karte Pro (Shared Cloud)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Rye&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
@@ -32,56 +32,45 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        /* Loading Overlay */
-        #loadingOverlay {
-            backdrop-filter: blur(5px);
-        }
+        #loadingOverlay { backdrop-filter: blur(5px); }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen flex flex-col items-center py-10 font-sans">
 
     <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center hidden">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-600 mb-4"></div>
-        <p id="loadingText" class="text-amber-800 font-bold text-lg">Verbinde mit Cloud...</p>
+        <p id="loadingText" class="text-amber-800 font-bold text-lg">Synchronisiere mit Cloud...</p>
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-4xl border border-gray-200 relative z-10 mb-10">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-amber-800 font-['Rye']">Quiz-Generator <span class="text-sm font-sans bg-amber-100 text-amber-800 px-2 py-1 rounded-full align-middle">Cloud</span></h1>
-            <div id="userStatus" class="text-xs text-gray-400">Offline</div>
+            <h1 class="text-3xl font-bold text-amber-800 font-['Rye']">Quiz-Generator <span class="text-sm font-sans bg-amber-100 text-amber-800 px-2 py-1 rounded-full align-middle">Shared ID</span></h1>
+            <div id="userStatus" class="text-xs text-gray-400">Verbinde...</div>
         </div>
 
-        <div id="statusMessage" class="bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded-lg mb-6 text-center text-sm">
-            System initialisiert...
-        </div>
+        <div id="statusMessage" class="hidden p-4 rounded mb-6 text-center border"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
             <div class="flex flex-col gap-6">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Frage (Oben)</label>
                     <div class="flex gap-2">
-                        <textarea id="questionInput" rows="2" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none shadow-sm resize-none" placeholder="Frage hier eingeben..."></textarea>
-                        <button onclick="toggleDictation('questionInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 rounded-lg px-3 flex items-center justify-center transition" title="Diktieren">
-                            🎤
-                        </button>
+                        <textarea id="questionInput" rows="2" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none shadow-sm resize-none" placeholder="Deine Frage..."></textarea>
+                        <button onclick="toggleDictation('questionInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 rounded-lg px-3 flex items-center justify-center transition">🎤</button>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Antwort (Unten)</label>
                     <div class="flex gap-2">
-                        <input type="text" id="answerInput" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none shadow-sm" placeholder="Antwort hier eingeben...">
-                        <button onclick="toggleDictation('answerInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 rounded-lg px-3 flex items-center justify-center transition" title="Diktieren">
-                            🎤
-                        </button>
+                        <input type="text" id="answerInput" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none shadow-sm" placeholder="Deine Antwort...">
+                        <button onclick="toggleDictation('answerInput', this)" class="bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 rounded-lg px-3 flex items-center justify-center transition">🎤</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mt-auto">
                     <button id="addToLibBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
-                        <span>☁️</span> In Cloud speichern
+                        <span>☁️</span> Speichern
                     </button>
                     <button id="copyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
                         <span>📋</span> Kopieren
@@ -101,59 +90,43 @@
 
     <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-4xl border border-gray-200 relative z-10">
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <h2 class="text-2xl font-bold text-gray-800 font-['Rye']">Meine Cloud-Bibliothek</h2>
-            
+            <h2 class="text-2xl font-bold text-gray-800 font-['Rye']">Gemeinsame Bibliothek</h2>
             <div class="flex gap-2">
                 <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden" />
-                <button onclick="document.getElementById('excelInput').click()" class="bg-green-100 text-green-700 hover:bg-green-200 border border-green-300 px-3 py-2 rounded font-bold text-sm transition flex items-center gap-1">
-                    📤 Import Excel
-                </button>
-                
-                <button onclick="exportToExcel()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300 px-3 py-2 rounded font-bold text-sm transition flex items-center gap-1">
-                    📥 Export Excel
-                </button>
-
-                <button onclick="startSlideshow()" class="bg-amber-500 hover:bg-amber-600 text-white border border-amber-600 px-4 py-2 rounded font-bold text-sm transition shadow flex items-center gap-1">
-                    🎬 Diashow Starten
-                </button>
+                <button onclick="document.getElementById('excelInput').click()" class="bg-green-100 text-green-700 hover:bg-green-200 border border-green-300 px-3 py-2 rounded font-bold text-sm transition">📤 Import</button>
+                <button onclick="exportToExcel()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300 px-3 py-2 rounded font-bold text-sm transition">📥 Export</button>
+                <button onclick="startSlideshow()" class="bg-amber-500 hover:bg-amber-600 text-white border border-amber-600 px-4 py-2 rounded font-bold text-sm transition shadow">🎬 Start</button>
             </div>
-        </div>
-
-        <div class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded border border-gray-200">
-            <strong>Hinweis:</strong> Alle Daten werden sicher in deiner persönlichen Cloud-Datenbank gespeichert.
         </div>
 
         <div class="overflow-x-auto custom-scrollbar border border-gray-200 rounded-lg max-h-[500px]">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titel</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frage</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Titel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frage</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
                     </tr>
                 </thead>
-                <tbody id="libraryList" class="bg-white divide-y divide-gray-200">
-                    <tr>
-                        <td colspan="3" class="px-6 py-4 text-center text-gray-400">Lade Daten...</td>
-                    </tr>
-                </tbody>
+                <tbody id="libraryList" class="bg-white divide-y divide-gray-200"></tbody>
             </table>
         </div>
         <div id="libraryCount" class="text-right text-sm text-gray-500 mt-2">0 Karten</div>
     </div>
 
     <div id="slideshowModal" class="fixed inset-0 bg-black bg-opacity-95 hidden z-50 flex flex-col items-center justify-center">
-        <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 hover:bg-red-600 rounded-full p-3 transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+        <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 hover:bg-red-600 rounded-full p-3 transition">✕</button>
         <div class="absolute top-5 left-5 text-gray-400 font-mono text-sm"><span id="slideCounter">0</span> verbleibend</div>
         <div class="relative w-full max-w-4xl p-4 flex flex-col items-center">
             <canvas id="slideshowCanvas" class="max-w-full max-h-[80vh] shadow-2xl border-4 border-gray-800 rounded-lg"></canvas>
+            <div id="slideshowEndMsg" class="hidden text-white text-center">
+                <h3 class="text-2xl font-bold mb-4">Alle Karten gelernt! 🎉</h3>
+                <button onclick="stopSlideshow()" class="bg-amber-600 px-6 py-2 rounded-full font-bold">Zurück</button>
+            </div>
             <div class="mt-8 flex gap-4">
                 <button id="revealBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg">Antwort zeigen</button>
                 <button id="nextSlideBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition text-lg hidden">Nächste Karte ➜</button>
             </div>
-            <div id="slideshowEndMsg" class="hidden text-white text-2xl font-bold mt-4 animate-bounce">🎉 Alle Karten erledigt!</div>
         </div>
     </div>
 
@@ -161,9 +134,18 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
             <h3 class="text-lg font-bold mb-4">Karte bearbeiten</h3>
             <input type="hidden" id="editId">
-            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Titel</label><input type="text" id="editTitle" class="w-full p-2 border rounded"></div>
-            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Frage</label><textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea></div>
-            <div class="mb-3"><label class="block text-xs font-bold text-gray-500">Antwort</label><input type="text" id="editAnswer" class="w-full p-2 border rounded"></div>
+            <div class="mb-3">
+                <label class="text-xs font-bold text-gray-500">Titel</label>
+                <input type="text" id="editTitle" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-3">
+                <label class="text-xs font-bold text-gray-500">Frage</label>
+                <textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="text-xs font-bold text-gray-500">Antwort</label>
+                <input type="text" id="editAnswer" class="w-full p-2 border rounded">
+            </div>
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded text-sm font-bold">Abbrechen</button>
                 <button onclick="saveEdit()" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-amber-700">Speichern</button>
@@ -172,12 +154,11 @@
     </div>
 
     <script type="module">
-        // --- 1. FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- 2. DEINE KONFIGURATION ---
+        // --- FIREBASE KONFIGURATION ---
         const firebaseConfig = {
           apiKey: "AIzaSyAZmsB0nlIeLVomNqimi7BQwPaHjfYqzUY",
           authDomain: "quizkarten.firebaseapp.com",
@@ -188,36 +169,24 @@
           measurementId: "G-FWTG0GMBLK"
         };
 
-        // --- 3. INITIALISIERUNG ---
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            console.log("Firebase initialisiert");
-        } catch (e) {
-            console.error("Firebase Fehler:", e);
-            document.getElementById('statusMessage').innerHTML = `❌ <b>Fehler:</b> Konnte Firebase nicht starten. Siehe Konsole.`;
-            document.getElementById('statusMessage').className = "bg-red-100 text-red-700 p-4 rounded mb-6 text-center border border-red-300";
-        }
+        // --- MASTER ID ---
+        const MASTER_ID = "bCRGLZAmeOSeqsbTGRJANgXPcxy2";
 
-        // Globale Variablen für UI
-        let currentCards = []; // Lokale Kopie der Cloud-Daten für UI & Slideshow
-        let currentUser = null;
+        // --- INITIALISIERUNG ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentCards = []; 
         const FILENAME = '1000133550-removebg-preview.png'; 
         let templateImage = new Image();
 
-        // DOM Elemente
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = document.getElementById('loadingText');
-        const statusMsg = document.getElementById('statusMessage');
         const canvas = document.getElementById('memeCanvas');
         const ctx = canvas.getContext('2d');
         const questionInput = document.getElementById('questionInput');
         const answerInput = document.getElementById('answerInput');
+        const statusMsg = document.getElementById('statusMessage');
 
-        // --- 4. APP START & MIGRATION LOGIC ---
-        
         templateImage.src = FILENAME;
         templateImage.onload = () => {
             canvas.width = templateImage.width;
@@ -225,68 +194,43 @@
             document.getElementById('slideshowCanvas').width = templateImage.width;
             document.getElementById('slideshowCanvas').height = templateImage.height;
             drawCanvas(ctx, "", "");
-            
-            // Erst wenn Bild da ist, Auth starten
-            if(auth) startAuthFlow();
-        };
-        templateImage.onerror = () => {
-            statusMsg.innerHTML = `⚠️ <b>Bild fehlt:</b> Bitte lege <code>${FILENAME}</code> in denselben Ordner.`;
-            statusMsg.className = "bg-red-50 text-red-600 border border-red-200 p-3 rounded mb-6 text-center";
+            startAuthFlow();
         };
 
         function startAuthFlow() {
-            loadingOverlay.classList.remove('hidden');
-            
+            document.getElementById('loadingOverlay').classList.remove('hidden');
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    currentUser = user;
-                    console.log("Angemeldet als:", user.uid);
-                    document.getElementById('userStatus').textContent = `User: ${user.uid.slice(0,5)}... (Anon)`;
-                    
-                    // 1. MIGRATIONS-CHECK: Haben wir noch alte LocalStorage Daten?
+                    document.getElementById('userStatus').textContent = "Cloud Verbunden (Master)";
                     await checkAndMigrateLocalStorage();
-
-                    // 2. LISTEN: Echtzeit-Verbindung zur DB aufbauen
                     subscribeToData();
-
                 } else {
-                    // Nicht eingeloggt -> Anonym einloggen
-                    console.log("Logge anonym ein...");
-                    await signInAnonymously(auth).catch(e => {
-                        console.error("Auth Fehler:", e);
-                        loadingText.textContent = "Fehler bei der Anmeldung.";
-                    });
+                    signInAnonymously(auth);
                 }
             });
         }
 
+        // Migriert lokale Daten falls vorhanden zur Master-ID
         async function checkAndMigrateLocalStorage() {
             const localDataStr = localStorage.getItem('quizCardsPro');
-            if (!localDataStr) {
-                loadingOverlay.classList.add('hidden');
-                return; // Nichts zu tun
+            if (!localDataStr) { 
+                document.getElementById('loadingOverlay').classList.add('hidden'); 
+                return; 
             }
 
             const localData = JSON.parse(localDataStr);
-            if (localData.length === 0) {
-                 loadingOverlay.classList.add('hidden');
-                 return;
+            if (localData.length === 0) { 
+                document.getElementById('loadingOverlay').classList.add('hidden'); 
+                return; 
             }
 
-            // MIGRATION STARTEN
-            loadingText.textContent = `Migriere ${localData.length} Karten in die Cloud...`;
-            console.log("Starte Migration von lokalen Daten...");
-
             const batch = writeBatch(db);
-         const userCol = collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards");
-            // Neu: Alle Geräte nutzen denselben Ordner
-//const userCol = collection(db, "global_cards");
-
+            const userCol = collection(db, "users", MASTER_ID, "cards");
 
             localData.forEach(item => {
-                const newRef = doc(userCol); // Auto-ID generieren
+                const newRef = doc(userCol);
                 batch.set(newRef, {
-                    title: item.title || "Importiert",
+                    title: item.title || "Lokal importiert",
                     question: item.question,
                     answer: item.answer,
                     createdAt: item.date || new Date().toISOString()
@@ -295,29 +239,16 @@
 
             try {
                 await batch.commit();
-                console.log("Migration erfolgreich!");
-                
-                // Lokal löschen, da jetzt in Cloud
                 localStorage.removeItem('quizCardsPro');
-                
-                statusMsg.textContent = `✅ Erfolgreich ${localData.length} alte Karten in die Cloud verschoben!`;
-                statusMsg.className = "bg-green-100 text-green-700 border border-green-200 p-3 rounded mb-6 text-center";
-                setTimeout(() => {
-                    statusMsg.textContent = "✅ System bereit (Cloud Mode)";
-                    statusMsg.className = "bg-blue-50 text-blue-600 border border-blue-200 p-3 rounded mb-6 text-center";
-                }, 4000);
-
+                console.log("Migration zur Master-ID erfolgreich");
             } catch (err) {
                 console.error("Migration fehlgeschlagen", err);
-                alert("Fehler beim Hochladen der alten Daten. Bitte Internet prüfen.");
             }
-            loadingOverlay.classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.add('hidden');
         }
 
         function subscribeToData() {
-            // Echtzeit-Listener: Feuert jedes Mal, wenn sich in der DB etwas ändert
-            const q = query(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"), orderBy("createdAt", "desc"));
-            
+            const q = query(collection(db, "users", MASTER_ID, "cards"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snapshot) => {
                 currentCards = [];
                 snapshot.forEach((doc) => {
@@ -325,26 +256,17 @@
                 });
                 renderLibrary();
                 document.getElementById('libraryCount').textContent = `${currentCards.length} Karten in Cloud`;
-                
-                // Overlay ausblenden falls noch an (passiert beim ersten Load)
-                loadingOverlay.classList.add('hidden');
-            }, (error) => {
-                console.error("Datenbank Fehler:", error);
+                document.getElementById('loadingOverlay').classList.add('hidden');
             });
         }
 
-        // --- 5. UI FUNKTIONEN (Angepasst an Window-Scope für HTML Buttons) ---
-
-        // Render Library
         function renderLibrary() {
             const list = document.getElementById('libraryList');
             list.innerHTML = '';
-            
             if (currentCards.length === 0) {
-                list.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Deine Cloud-Bibliothek ist leer.</td></tr>`;
+                list.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Keine Karten in der Cloud.</td></tr>`;
                 return;
             }
-
             currentCards.forEach(card => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50 transition";
@@ -352,52 +274,44 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[150px]">${card.title}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 overflow-hidden text-ellipsis max-w-[250px]">${card.question}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="window.downloadSingle('${card.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Bild laden">⬇️</button>
-                        <button onclick="window.editSingle('${card.id}')" class="text-amber-600 hover:text-amber-900 mr-3" title="Bearbeiten">✏️</button>
-                        <button onclick="window.deleteSingle('${card.id}')" class="text-red-600 hover:text-red-900" title="Löschen">🗑️</button>
+                        <button onclick="window.downloadSingle('${card.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">⬇️</button>
+                        <button onclick="window.editSingle('${card.id}')" class="text-amber-600 hover:text-amber-900 mr-3">✏️</button>
+                        <button onclick="window.deleteSingle('${card.id}')" class="text-red-600 hover:text-red-900">🗑️</button>
                     </td>
                 `;
                 list.appendChild(tr);
             });
         }
 
-        // Add New (Save to Cloud)
+        // --- AKTIONEN ---
         document.getElementById('addToLibBtn').addEventListener('click', async () => {
-            if(!currentUser) return alert("Warte auf Verbindung...");
             const q = questionInput.value.trim();
             const a = answerInput.value.trim();
-            if (!q || !a) return alert("Bitte ausfüllen.");
+            if (!q || !a) return alert("Bitte Frage und Antwort eingeben.");
 
             const title = q.substring(0, 20).replace(/[^a-zA-Z0-9 ]/g, "") || "Neue Karte";
-            const btn = document.getElementById('addToLibBtn');
-            const oldText = btn.innerHTML;
-            btn.innerHTML = "⏳ Speichere...";
-            
             try {
-                await addDoc(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"), {
+                await addDoc(collection(db, "users", MASTER_ID, "cards"), {
                     title: title,
                     question: q,
                     answer: a,
                     createdAt: new Date().toISOString()
                 });
-                btn.innerHTML = "✅ In Cloud!";
-                setTimeout(() => btn.innerHTML = oldText, 1500);
+                questionInput.value = '';
+                answerInput.value = '';
+                drawCanvas(ctx, '', '');
             } catch (e) {
-                console.error(e);
                 alert("Fehler beim Speichern: " + e.message);
-                btn.innerHTML = oldText;
             }
         });
 
-        // Delete (Cloud)
         window.deleteSingle = async (id) => {
-            if(!confirm("Wirklich aus der Cloud löschen?")) return;
+            if(!confirm("Karte wirklich aus der Cloud löschen?")) return;
             try {
-                await deleteDoc(doc(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards", id));
-            } catch(e) { alert("Löschen fehlgeschlagen: " + e.message); }
+                await deleteDoc(doc(db, "users", MASTER_ID, "cards", id));
+            } catch (e) { alert("Löschen fehlgeschlagen."); }
         }
 
-        // Edit (Cloud)
         window.editSingle = (id) => {
             const card = currentCards.find(c => c.id === id);
             if(!card) return;
@@ -411,79 +325,29 @@
         window.saveEdit = async () => {
             const id = document.getElementById('editId').value;
             try {
-                await updateDoc(doc(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards", id), {
+                await updateDoc(doc(db, "users", MASTER_ID, "cards", id), {
                     title: document.getElementById('editTitle').value,
                     question: document.getElementById('editQuestion').value,
                     answer: document.getElementById('editAnswer').value
                 });
                 document.getElementById('editModal').classList.add('hidden');
-            } catch(e) { alert("Update fehlgeschlagen."); }
+            } catch (e) { alert("Update fehlgeschlagen."); }
         }
 
-        // Excel Import (Direct to Cloud)
-        document.getElementById('excelInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file || !currentUser) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: ["title", "question", "answer"], range: 1}); 
-                
-                if(!confirm(`${jsonData.length} Karten gefunden. In Cloud importieren?`)) return;
-
-                const batch = writeBatch(db);
-                let count = 0;
-                jsonData.forEach(row => {
-                    if(row.question && row.answer) {
-                        const newRef = doc(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"));
-                        batch.set(newRef, {
-                            title: row.title || "Excel Import",
-                            question: row.question,
-                            answer: row.answer,
-                            createdAt: new Date().toISOString()
-                        });
-                        count++;
-                    }
-                });
-
-                await batch.commit();
-                alert(`${count} Karten importiert!`);
-                document.getElementById('excelInput').value = ''; 
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        // Export Excel (From Cloud Data)
-        window.exportToExcel = () => {
-            if(currentCards.length === 0) return alert("Nichts zu exportieren.");
-            const dataToExport = currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer }));
-            const ws = XLSX.utils.json_to_sheet(dataToExport);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "QuizKarten");
-            XLSX.writeFile(wb, "Meine_Cloud_Karten.xlsx");
-        }
-
-        // --- HELPER FUNCTIONS (Canvas, Dictation, Slideshow) ---
-        // Diese bleiben fast identisch, nutzen aber "currentCards"
-
+        // --- HILFSFUNKTIONEN ---
         function drawCanvas(context, qText, aText, hideAnswer = false) {
-            if (!templateImage.complete || templateImage.naturalWidth === 0) return;
+            if (!templateImage.complete) return;
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
             context.drawImage(templateImage, 0, 0);
             context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
-            
             const w = context.canvas.width; const h = context.canvas.height;
-            const qX = w * 0.5; const qY = h * 0.48; const qMaxWidth = w * 0.70; const qFontSize = w * 0.05; 
-            
-            context.font = `bold ${qFontSize}px "Roboto Slab", "Georgia", serif`;
-            wrapText(context, qText, qX, qY, qMaxWidth, qFontSize * 1.3);
-
+            const qFontSize = w * 0.05; 
+            context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
+            wrapText(context, qText, w * 0.5, h * 0.48, w * 0.70, qFontSize * 1.3);
             if (!hideAnswer) {
-                const aX = w * 0.5; const aY = h * 0.795; const aFontSize = w * 0.045; 
-                context.font = `bold ${aFontSize}px "Roboto Slab", "Georgia", serif`;
-                context.fillText(aText, aX, aY);
+                const aFontSize = w * 0.045; 
+                context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
+                context.fillText(aText, w * 0.5, h * 0.795);
             }
         }
 
@@ -501,49 +365,49 @@
             for(let k = 0; k < lines.length; k++) { context.fillText(lines[k], x, startY + (k * lineHeight)); }
         }
 
-        // Event Listener für Live Preview
         questionInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
         answerInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
 
-        // Dictation
+        // Spracherkennung
         let recognition = null;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE'; recognition.continuous = false;
+            recognition.lang = 'de-DE';
         }
         window.toggleDictation = (inputId, btn) => {
-            if (!recognition) return alert("Keine Spracherkennung.");
+            if (!recognition) return alert("Spracherkennung nicht unterstützt.");
             btn.classList.add('mic-active');
             recognition.start();
             recognition.onresult = (e) => {
                 document.getElementById(inputId).value = e.results[0][0].transcript;
                 drawCanvas(ctx, questionInput.value, answerInput.value);
-                btn.classList.remove('mic-active');
             };
             recognition.onend = () => btn.classList.remove('mic-active');
         }
 
-        // Reset & Copy
         document.getElementById('resetBtn').addEventListener('click', () => {
             questionInput.value = ''; answerInput.value = ''; drawCanvas(ctx, '', '');
         });
         document.getElementById('copyBtn').addEventListener('click', () => {
-            canvas.toBlob(b => navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(()=>alert("Kopiert!")).catch(()=>alert("Fehler")));
+            canvas.toBlob(b => {
+                const item = new ClipboardItem({'image/png': b});
+                navigator.clipboard.write([item]).then(() => alert("Bild kopiert!"));
+            });
         });
 
-        // Slideshow Logic
+        // Slideshow
         let slideshowDeck = [];
         let currentSlideCard = null;
         const ssCanvas = document.getElementById('slideshowCanvas');
         const ssCtx = ssCanvas.getContext('2d');
         const revealBtn = document.getElementById('revealBtn');
         const nextSlideBtn = document.getElementById('nextSlideBtn');
-        const slideshowEndMsg = document.getElementById('slideshowEndMsg');
         const slideCounter = document.getElementById('slideCounter');
+        const slideshowEndMsg = document.getElementById('slideshowEndMsg');
 
         window.startSlideshow = () => {
-            if(currentCards.length === 0) return alert("Bibliothek leer.");
+            if(currentCards.length === 0) return alert("Bibliothek ist leer.");
             slideshowDeck = [...currentCards].sort(() => Math.random() - 0.5);
             document.getElementById('slideshowModal').classList.remove('hidden');
             slideshowEndMsg.classList.add('hidden');
@@ -553,9 +417,7 @@
         function loadNextSlide() {
             revealBtn.classList.remove('hidden'); nextSlideBtn.classList.add('hidden');
             if (slideshowDeck.length === 0) {
-                ssCtx.fillStyle = "#222"; ssCtx.fillRect(0,0, ssCanvas.width, ssCanvas.height);
-                ssCtx.fillStyle = "white"; ssCtx.textAlign = "center"; ssCtx.font = "40px sans-serif";
-                ssCtx.fillText("Ende", ssCanvas.width/2, ssCanvas.height/2);
+                ssCtx.clearRect(0,0,ssCanvas.width, ssCanvas.height);
                 revealBtn.classList.add('hidden'); slideshowEndMsg.classList.remove('hidden'); slideCounter.textContent = "0";
                 return;
             }
@@ -571,7 +433,6 @@
         nextSlideBtn.addEventListener('click', loadNextSlide);
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
         
-        // Download Single Helper
         window.downloadSingle = (id) => {
              const card = currentCards.find(c => c.id === id);
              if(!card) return;
@@ -583,7 +444,41 @@
              drawCanvas(ctx, questionInput.value, answerInput.value);
         }
 
+        // Excel Export / Import
+        window.exportToExcel = () => {
+            const data = currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "QuizKarten");
+            XLSX.writeFile(wb, "Meine_Cloud_Karten.xlsx");
+        }
+
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: ["title", "question", "answer"], range: 1}); 
+                const batch = writeBatch(db);
+                jsonData.forEach(row => {
+                    if(row.question && row.answer) {
+                        const newRef = doc(collection(db, "users", MASTER_ID, "cards"));
+                        batch.set(newRef, {
+                            title: row.title || "Excel Import",
+                            question: row.question,
+                            answer: row.answer,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                });
+                await batch.commit();
+                alert("Import erfolgreich!");
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
     </script>
 </body>
 </html>
-
