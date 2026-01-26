@@ -86,12 +86,15 @@
     </div>
 
     <div id="slideshowModal" class="fixed inset-0 bg-black bg-opacity-95 hidden z-[100] flex flex-col items-center justify-center">
-        <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 p-3 rounded-full">✕</button>
+        <button onclick="stopSlideshow()" class="absolute top-5 right-5 text-white bg-gray-700 p-3 rounded-full shadow-lg">✕</button>
+        <div id="cardProgress" class="absolute top-5 left-5 text-white font-mono text-lg bg-black/40 px-4 py-2 rounded-lg">
+            Frage <span id="currentNumber">0</span> / <span id="totalNumber">0</span>
+        </div>
         <div class="relative w-full max-w-4xl p-4 flex flex-col items-center">
             <canvas id="slideshowCanvas" class="max-w-full max-h-[75vh] shadow-2xl border-4 border-gray-800 rounded-lg bg-white"></canvas>
             <div class="mt-8 flex gap-4">
-                <button id="revealBtn" class="bg-white text-black font-bold py-3 px-8 rounded-full text-lg shadow-xl">Antwort aufdecken</button>
-                <button id="nextSlideBtn" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-full text-lg shadow-xl hidden">Nächste Frage ➜</button>
+                <button id="revealBtn" class="bg-white text-black font-bold py-3 px-8 rounded-full text-lg shadow-xl hover:bg-gray-100 transition">Antwort aufdecken</button>
+                <button id="nextSlideBtn" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-full text-lg shadow-xl hidden hover:bg-emerald-500 transition">Nächste Frage ➜</button>
             </div>
         </div>
     </div>
@@ -183,7 +186,6 @@
                 </tr>`).join('');
         }
 
-        // --- OPTIMIERTE TEXT-ANPASSUNG ---
         function drawCanvas(context, qText, aText, hideAnswer = false) {
             if (!templateImage.complete) return;
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
@@ -191,27 +193,24 @@
             context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
             const w = context.canvas.width; const h = context.canvas.height;
             
-            // Schriftgröße für Frage
             let fSize = w * 0.055; 
             context.font = `bold ${fSize}px "Roboto Slab"`;
             
             let words = qText.split(' '), lines = [], line = '';
-            // Seitliches Padding: 0.72 statt 0.75 für mehr Rand
             words.forEach(word => {
                 if(context.measureText(line + word).width > w * 0.72) { lines.push(line); line = word + ' '; }
                 else line += word + ' ';
             });
             lines.push(line);
             
-            // Höhenanpassung: Text wird weiter nach unten geschoben (0.54 statt 0.52), um Logo zu meiden
             while ((lines.length * fSize * 1.35) > h * 0.35 && fSize > 12) {
                 fSize -= 1; context.font = `bold ${fSize}px "Roboto Slab"`;
             }
             
+            // h * 0.54 sorgt für den nötigen Abstand nach unten, damit der Text nicht im Logo landet
             let qStartY = (h * 0.54) - (lines.length * fSize * 1.35 / 2) + (fSize * 0.65);
             lines.forEach((l, i) => context.fillText(l, w * 0.5, qStartY + (i * fSize * 1.35)));
 
-            // Antwort-Box
             if (!hideAnswer && aText) {
                 let aSize = w * 0.045;
                 context.font = `bold ${aSize}px "Roboto Slab"`;
@@ -250,25 +249,47 @@
             document.getElementById('editModal').classList.add('hidden');
         }
 
+        // --- SPIEL LOGIK (RANDOM & EINMALIG) ---
+        let ssDeck = []; 
+        let totalInGame = 0;
+        let currentIdx = 0;
+        let curSS = null;
+
         window.startSlideshow = () => {
-            if(currentCards.length === 0) return;
+            if(currentCards.length === 0) return alert("Keine Fragen vorhanden!");
+            // Mische das Deck zufällig (Fisher-Yates Shuffle)
             ssDeck = [...currentCards].sort(() => Math.random() - 0.5);
+            totalInGame = ssDeck.length;
+            currentIdx = 0;
+            
+            document.getElementById('totalNumber').textContent = totalInGame;
             document.getElementById('slideshowModal').classList.remove('hidden');
             loadNext();
         }
-        let ssDeck = []; let curSS = null;
+
         function loadNext() {
             document.getElementById('revealBtn').classList.remove('hidden');
             document.getElementById('nextSlideBtn').classList.add('hidden');
-            if (!ssDeck.length) return stopSlideshow();
+            
+            if (ssDeck.length === 0) {
+                alert("Spiel beendet! Alle Fragen wurden einmal angezeigt.");
+                return stopSlideshow();
+            }
+            
+            currentIdx++;
+            document.getElementById('currentNumber').textContent = currentIdx;
+            
+            // Nimm die oberste Karte vom Stapel (garantiert einmalig)
             curSS = ssDeck.pop();
             drawCanvas(document.getElementById('slideshowCanvas').getContext('2d'), curSS.question, curSS.answer, true);
         }
+
         document.getElementById('revealBtn').onclick = () => {
             drawCanvas(document.getElementById('slideshowCanvas').getContext('2d'), curSS.question, curSS.answer, false);
             document.getElementById('revealBtn').classList.add('hidden');
             document.getElementById('nextSlideBtn').classList.remove('hidden');
         }
+
         document.getElementById('nextSlideBtn').onclick = loadNext;
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
         window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
