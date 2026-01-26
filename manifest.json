@@ -1,0 +1,15 @@
+{
+  "name": "Quiz Karte Pro",
+  "short_name": "QuizPro",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#b45309",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3407/3407024.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
