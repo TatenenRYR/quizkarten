@@ -106,7 +106,7 @@
             <div class="mb-3"><label class="text-xs font-bold opacity-50">Frage</label><textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none text-slate-900"></textarea></div>
             <div class="mb-3"><label class="text-xs font-bold opacity-50">Antwort</label><input type="text" id="editAnswer" class="w-full p-2 border rounded text-slate-900"></div>
             <div class="flex justify-end gap-2 mt-4">
-                <button onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded text-sm font-bold text-slate-700">Abbruch</button>
+                <button onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded text-sm font-bold text-slate-700">Abbrechen</button>
                 <button onclick="saveEdit()" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-bold">Sichern</button>
             </div>
         </div>
@@ -186,6 +186,7 @@
                 </tr>`).join('');
         }
 
+        // --- OPTIMIERTE TEXT-ANPASSUNG GEGEN ÜBERLAPPUNG ---
         function drawCanvas(context, qText, aText, hideAnswer = false) {
             if (!templateImage.complete) return;
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
@@ -198,23 +199,24 @@
             
             let words = qText.split(' '), lines = [], line = '';
             words.forEach(word => {
-                if(context.measureText(line + word).width > w * 0.72) { lines.push(line); line = word + ' '; }
+                if(context.measureText(line + word).width > w * 0.70) { lines.push(line); line = word + ' '; }
                 else line += word + ' ';
             });
             lines.push(line);
             
-            while ((lines.length * fSize * 1.35) > h * 0.35 && fSize > 12) {
+            // h * 0.32 begrenzt die maximale Höhe des Textblocks, damit er nicht nach oben/unten ausbricht
+            while ((lines.length * fSize * 1.35) > h * 0.32 && fSize > 12) {
                 fSize -= 1; context.font = `bold ${fSize}px "Roboto Slab"`;
             }
             
-            // h * 0.54 sorgt für den nötigen Abstand nach unten, damit der Text nicht im Logo landet
-            let qStartY = (h * 0.54) - (lines.length * fSize * 1.35 / 2) + (fSize * 0.65);
+            // h * 0.56 verschiebt den Textstart nach unten, um das Logo zu meiden (Anpassung basierend auf Screenshots)
+            let qStartY = (h * 0.56) - (lines.length * fSize * 1.35 / 2) + (fSize * 0.65);
             lines.forEach((l, i) => context.fillText(l, w * 0.5, qStartY + (i * fSize * 1.35)));
 
             if (!hideAnswer && aText) {
                 let aSize = w * 0.045;
                 context.font = `bold ${aSize}px "Roboto Slab"`;
-                while(context.measureText(aText).width > w * 0.72) {
+                while(context.measureText(aText).width > w * 0.70) {
                     aSize -= 1; context.font = `bold ${aSize}px "Roboto Slab"`;
                 }
                 context.fillText(aText, w * 0.5, h * 0.795);
@@ -249,7 +251,6 @@
             document.getElementById('editModal').classList.add('hidden');
         }
 
-        // --- SPIEL LOGIK (RANDOM & EINMALIG) ---
         let ssDeck = []; 
         let totalInGame = 0;
         let currentIdx = 0;
@@ -257,11 +258,9 @@
 
         window.startSlideshow = () => {
             if(currentCards.length === 0) return alert("Keine Fragen vorhanden!");
-            // Mische das Deck zufällig (Fisher-Yates Shuffle)
             ssDeck = [...currentCards].sort(() => Math.random() - 0.5);
             totalInGame = ssDeck.length;
             currentIdx = 0;
-            
             document.getElementById('totalNumber').textContent = totalInGame;
             document.getElementById('slideshowModal').classList.remove('hidden');
             loadNext();
@@ -270,16 +269,9 @@
         function loadNext() {
             document.getElementById('revealBtn').classList.remove('hidden');
             document.getElementById('nextSlideBtn').classList.add('hidden');
-            
-            if (ssDeck.length === 0) {
-                alert("Spiel beendet! Alle Fragen wurden einmal angezeigt.");
-                return stopSlideshow();
-            }
-            
+            if (ssDeck.length === 0) return stopSlideshow();
             currentIdx++;
             document.getElementById('currentNumber').textContent = currentIdx;
-            
-            // Nimm die oberste Karte vom Stapel (garantiert einmalig)
             curSS = ssDeck.pop();
             drawCanvas(document.getElementById('slideshowCanvas').getContext('2d'), curSS.question, curSS.answer, true);
         }
@@ -289,14 +281,13 @@
             document.getElementById('revealBtn').classList.add('hidden');
             document.getElementById('nextSlideBtn').classList.remove('hidden');
         }
-
         document.getElementById('nextSlideBtn').onclick = loadNext;
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
         window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
         window.exportToExcel = () => {
             const ws = XLSX.utils.json_to_sheet(currentCards.map(c => ({ Frage: c.question, Antwort: c.answer })));
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Quiz");
-            XLSX.writeFile(wb, "Spiel_Fragen.xlsx");
+            XLSX.writeFile(wb, "Spiel_Backup.xlsx");
         }
     </script>
 </body>
