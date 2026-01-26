@@ -316,7 +316,7 @@
 
         function subscribeToData() {
             // Echtzeit-Listener: Feuert jedes Mal, wenn sich in der DB etwas ändert
-            const q = query(collection(db, "users", currentUser.uid, "cards"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"), orderBy("createdAt", "desc"));
             
             onSnapshot(q, (snapshot) => {
                 currentCards = [];
@@ -374,7 +374,7 @@
             btn.innerHTML = "⏳ Speichere...";
             
             try {
-                await addDoc(collection(db, "users", currentUser.uid, "cards"), {
+                await addDoc(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"), {
                     title: title,
                     question: q,
                     answer: a,
@@ -393,7 +393,7 @@
         window.deleteSingle = async (id) => {
             if(!confirm("Wirklich aus der Cloud löschen?")) return;
             try {
-                await deleteDoc(doc(db, "users", currentUser.uid, "cards", id));
+                await deleteDoc(doc(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards", id));
             } catch(e) { alert("Löschen fehlgeschlagen: " + e.message); }
         }
 
@@ -411,7 +411,7 @@
         window.saveEdit = async () => {
             const id = document.getElementById('editId').value;
             try {
-                await updateDoc(doc(db, "users", currentUser.uid, "cards", id), {
+                await updateDoc(doc(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards", id), {
                     title: document.getElementById('editTitle').value,
                     question: document.getElementById('editQuestion').value,
                     answer: document.getElementById('editAnswer').value
@@ -437,7 +437,7 @@
                 let count = 0;
                 jsonData.forEach(row => {
                     if(row.question && row.answer) {
-                        const newRef = doc(collection(db, "users", currentUser.uid, "cards"));
+                        const newRef = doc(collection(db, "users", "bCRGLZAmeOSeqsbTGRJANgXPcxy2", "cards"));
                         batch.set(newRef, {
                             title: row.title || "Excel Import",
                             question: row.question,
