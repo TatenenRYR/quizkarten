@@ -278,7 +278,10 @@
             console.log("Starte Migration von lokalen Daten...");
 
             const batch = writeBatch(db);
-            const userCol = collection(db, "users", currentUser.uid, "cards");
+         //   const userCol = collection(db, "users", currentUser.uid, "cards");
+            // Neu: Alle Geräte nutzen denselben Ordner
+const userCol = collection(db, "global_cards");
+
 
             localData.forEach(item => {
                 const newRef = doc(userCol); // Auto-ID generieren
