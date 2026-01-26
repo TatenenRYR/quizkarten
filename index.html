@@ -28,6 +28,7 @@
     </div>
 
     <div class="fixed top-4 right-4 flex gap-2 z-50">
+        <button onclick="window.installApp()" class="bg-blue-600 text-white p-2 rounded-full shadow hover:bg-blue-700 transition hidden" id="installBtn">📲</button>
         <button onclick="toggleDarkMode()" class="bg-amber-100 text-amber-800 p-2 rounded-full shadow hover:bg-amber-200 transition">🌙</button>
     </div>
 
@@ -186,7 +187,6 @@
                 </tr>`).join('');
         }
 
-        // --- OPTIMIERTE TEXT-ANPASSUNG GEGEN ÜBERLAPPUNG ---
         function drawCanvas(context, qText, aText, hideAnswer = false) {
             if (!templateImage.complete) return;
             context.clearRect(0, 0, context.canvas.width, context.canvas.height);
@@ -198,26 +198,40 @@
             context.font = `bold ${fSize}px "Roboto Slab"`;
             
             let words = qText.split(' '), lines = [], line = '';
-            words.forEach(word => {
-                if(context.measureText(line + word).width > w * 0.70) { lines.push(line); line = word + ' '; }
-                else line += word + ' ';
-            });
-            lines.push(line);
+            const maxTextWidth = w * 0.68;
             
-            // h * 0.32 begrenzt die maximale Höhe des Textblocks, damit er nicht nach oben/unten ausbricht
-            while ((lines.length * fSize * 1.35) > h * 0.32 && fSize > 12) {
-                fSize -= 1; context.font = `bold ${fSize}px "Roboto Slab"`;
+            words.forEach(word => {
+                if(context.measureText(line + word).width > maxTextWidth) { 
+                    lines.push(line.trim()); 
+                    line = word + ' '; 
+                } else {
+                    line += word + ' ';
+                }
+            });
+            lines.push(line.trim());
+            
+            const maxBlockHeight = h * 0.32;
+            const lineHeightFactor = 1.4;
+            
+            while ((lines.length * fSize * lineHeightFactor) > maxBlockHeight && fSize > 12) {
+                fSize -= 1; 
+                context.font = `bold ${fSize}px "Roboto Slab"`;
             }
             
-            // h * 0.56 verschiebt den Textstart nach unten, um das Logo zu meiden (Anpassung basierend auf Screenshots)
-            let qStartY = (h * 0.56) - (lines.length * fSize * 1.35 / 2) + (fSize * 0.65);
-            lines.forEach((l, i) => context.fillText(l, w * 0.5, qStartY + (i * fSize * 1.35)));
+            let totalBlockHeight = lines.length * fSize * lineHeightFactor;
+            // h * 0.56 für optimalen Abstand zum Logo
+            let qStartY = (h * 0.56) - (totalBlockHeight / 2) + (fSize / 2);
+            
+            lines.forEach((l, i) => {
+                context.fillText(l, w * 0.5, qStartY + (i * fSize * lineHeightFactor));
+            });
 
             if (!hideAnswer && aText) {
-                let aSize = w * 0.045;
+                let aSize = w * 0.042;
                 context.font = `bold ${aSize}px "Roboto Slab"`;
-                while(context.measureText(aText).width > w * 0.70) {
-                    aSize -= 1; context.font = `bold ${aSize}px "Roboto Slab"`;
+                while(context.measureText(aText).width > maxTextWidth && aSize > 10) {
+                    aSize -= 1; 
+                    context.font = `bold ${aSize}px "Roboto Slab"`;
                 }
                 context.fillText(aText, w * 0.5, h * 0.795);
             }
@@ -251,6 +265,26 @@
             document.getElementById('editModal').classList.add('hidden');
         }
 
+        // --- PWA INSTALLATION LOGIC ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').classList.remove('hidden');
+        });
+
+        window.installApp = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') document.getElementById('installBtn').classList.add('hidden');
+                deferredPrompt = null;
+            } else {
+                alert("Installation: Nutzen Sie das 'Teilen'-Menü im Browser und wählen Sie 'Zum Home-Bildschirm hinzufügen'.");
+            }
+        };
+
+        // --- SPIEL LOGIK (RANDOM & EINMALIG) ---
         let ssDeck = []; 
         let totalInGame = 0;
         let currentIdx = 0;
@@ -269,7 +303,10 @@
         function loadNext() {
             document.getElementById('revealBtn').classList.remove('hidden');
             document.getElementById('nextSlideBtn').classList.add('hidden');
-            if (ssDeck.length === 0) return stopSlideshow();
+            if (ssDeck.length === 0) {
+                alert("Spiel beendet!");
+                return stopSlideshow();
+            }
             currentIdx++;
             document.getElementById('currentNumber').textContent = currentIdx;
             curSS = ssDeck.pop();
@@ -284,10 +321,11 @@
         document.getElementById('nextSlideBtn').onclick = loadNext;
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
         window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
-        window.exportToExcel = () => {
-            const ws = XLSX.utils.json_to_sheet(currentCards.map(c => ({ Frage: c.question, Antwort: c.answer })));
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Quiz");
-            XLSX.writeFile(wb, "Spiel_Backup.xlsx");
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
         }
     </script>
 </body>
