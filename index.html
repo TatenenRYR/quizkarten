@@ -134,18 +134,9 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
             <h3 class="text-lg font-bold mb-4">Karte bearbeiten</h3>
             <input type="hidden" id="editId">
-            <div class="mb-3">
-                <label class="text-xs font-bold text-gray-500">Titel</label>
-                <input type="text" id="editTitle" class="w-full p-2 border rounded">
-            </div>
-            <div class="mb-3">
-                <label class="text-xs font-bold text-gray-500">Frage</label>
-                <textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea>
-            </div>
-            <div class="mb-3">
-                <label class="text-xs font-bold text-gray-500">Antwort</label>
-                <input type="text" id="editAnswer" class="w-full p-2 border rounded">
-            </div>
+            <div class="mb-3"><label class="text-xs font-bold text-gray-500">Titel</label><input type="text" id="editTitle" class="w-full p-2 border rounded"></div>
+            <div class="mb-3"><label class="text-xs font-bold text-gray-500">Frage</label><textarea id="editQuestion" rows="2" class="w-full p-2 border rounded resize-none"></textarea></div>
+            <div class="mb-3"><label class="text-xs font-bold text-gray-500">Antwort</label><input type="text" id="editAnswer" class="w-full p-2 border rounded"></div>
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded text-sm font-bold">Abbrechen</button>
                 <button onclick="saveEdit()" class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-amber-700">Speichern</button>
@@ -158,7 +149,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- FIREBASE KONFIGURATION ---
         const firebaseConfig = {
           apiKey: "AIzaSyAZmsB0nlIeLVomNqimi7BQwPaHjfYqzUY",
           authDomain: "quizkarten.firebaseapp.com",
@@ -169,10 +159,8 @@
           measurementId: "G-FWTG0GMBLK"
         };
 
-        // --- MASTER ID ---
         const MASTER_ID = "bCRGLZAmeOSeqsbTGRJANgXPcxy2";
 
-        // --- INITIALISIERUNG ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -185,7 +173,6 @@
         const ctx = canvas.getContext('2d');
         const questionInput = document.getElementById('questionInput');
         const answerInput = document.getElementById('answerInput');
-        const statusMsg = document.getElementById('statusMessage');
 
         templateImage.src = FILENAME;
         templateImage.onload = () => {
@@ -201,7 +188,7 @@
             document.getElementById('loadingOverlay').classList.remove('hidden');
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    document.getElementById('userStatus').textContent = "Cloud Verbunden (Master)";
+                    document.getElementById('userStatus').textContent = "Verbunden: Master-Cloud";
                     await checkAndMigrateLocalStorage();
                     subscribeToData();
                 } else {
@@ -210,40 +197,18 @@
             });
         }
 
-        // Migriert lokale Daten falls vorhanden zur Master-ID
         async function checkAndMigrateLocalStorage() {
             const localDataStr = localStorage.getItem('quizCardsPro');
-            if (!localDataStr) { 
-                document.getElementById('loadingOverlay').classList.add('hidden'); 
-                return; 
-            }
-
+            if (!localDataStr) { document.getElementById('loadingOverlay').classList.add('hidden'); return; }
             const localData = JSON.parse(localDataStr);
-            if (localData.length === 0) { 
-                document.getElementById('loadingOverlay').classList.add('hidden'); 
-                return; 
-            }
-
+            if (localData.length === 0) { document.getElementById('loadingOverlay').classList.add('hidden'); return; }
             const batch = writeBatch(db);
             const userCol = collection(db, "users", MASTER_ID, "cards");
-
             localData.forEach(item => {
                 const newRef = doc(userCol);
-                batch.set(newRef, {
-                    title: item.title || "Lokal importiert",
-                    question: item.question,
-                    answer: item.answer,
-                    createdAt: item.date || new Date().toISOString()
-                });
+                batch.set(newRef, { title: item.title || "Lokal", question: item.question, answer: item.answer, createdAt: item.date || new Date().toISOString() });
             });
-
-            try {
-                await batch.commit();
-                localStorage.removeItem('quizCardsPro');
-                console.log("Migration zur Master-ID erfolgreich");
-            } catch (err) {
-                console.error("Migration fehlgeschlagen", err);
-            }
+            try { await batch.commit(); localStorage.removeItem('quizCardsPro'); } catch (err) { console.error(err); }
             document.getElementById('loadingOverlay').classList.add('hidden');
         }
 
@@ -251,11 +216,9 @@
             const q = query(collection(db, "users", MASTER_ID, "cards"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snapshot) => {
                 currentCards = [];
-                snapshot.forEach((doc) => {
-                    currentCards.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach((doc) => currentCards.push({ id: doc.id, ...doc.data() }));
                 renderLibrary();
-                document.getElementById('libraryCount').textContent = `${currentCards.length} Karten in Cloud`;
+                document.getElementById('libraryCount').textContent = `${currentCards.length} Karten (Master)`;
                 document.getElementById('loadingOverlay').classList.add('hidden');
             });
         }
@@ -264,54 +227,82 @@
             const list = document.getElementById('libraryList');
             list.innerHTML = '';
             if (currentCards.length === 0) {
-                list.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Keine Karten in der Cloud.</td></tr>`;
+                list.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Keine Karten.</td></tr>`;
                 return;
             }
             currentCards.forEach(card => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition";
+                tr.className = "hover:bg-gray-50 transition text-sm";
                 tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[150px]">${card.title}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 overflow-hidden text-ellipsis max-w-[250px]">${card.question}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="window.downloadSingle('${card.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">⬇️</button>
-                        <button onclick="window.editSingle('${card.id}')" class="text-amber-600 hover:text-amber-900 mr-3">✏️</button>
-                        <button onclick="window.deleteSingle('${card.id}')" class="text-red-600 hover:text-red-900">🗑️</button>
+                    <td class="px-6 py-4 font-medium text-gray-900 overflow-hidden text-ellipsis max-w-[120px]">${card.title}</td>
+                    <td class="px-6 py-4 text-gray-500 overflow-hidden text-ellipsis max-w-[200px]">${card.question}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="window.downloadSingle('${card.id}')" class="text-indigo-600 mr-2">⬇️</button>
+                        <button onclick="window.editSingle('${card.id}')" class="text-amber-600 mr-2">✏️</button>
+                        <button onclick="window.deleteSingle('${card.id}')" class="text-red-600">🗑️</button>
                     </td>
                 `;
                 list.appendChild(tr);
             });
         }
 
-        // --- AKTIONEN ---
-        document.getElementById('addToLibBtn').addEventListener('click', async () => {
-            const q = questionInput.value.trim();
-            const a = answerInput.value.trim();
-            if (!q || !a) return alert("Bitte Frage und Antwort eingeben.");
+        // --- AUTOMATISCHE SKALIERUNG DER SCHRIFT ---
+        function drawCanvas(context, qText, aText, hideAnswer = false) {
+            if (!templateImage.complete) return;
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+            context.drawImage(templateImage, 0, 0);
+            context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
+            const w = context.canvas.width; const h = context.canvas.height;
 
-            const title = q.substring(0, 20).replace(/[^a-zA-Z0-9 ]/g, "") || "Neue Karte";
-            try {
-                await addDoc(collection(db, "users", MASTER_ID, "cards"), {
-                    title: title,
-                    question: q,
-                    answer: a,
-                    createdAt: new Date().toISOString()
-                });
-                questionInput.value = '';
-                answerInput.value = '';
-                drawCanvas(ctx, '', '');
-            } catch (e) {
-                alert("Fehler beim Speichern: " + e.message);
+            // Frage (Oben) - Auto Scaling
+            const qMaxWidth = w * 0.75; const qMaxHeight = h * 0.35; let qFontSize = w * 0.055;
+            context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
+            let qLines = getWrappedLines(context, qText, qMaxWidth);
+            while ((qLines.length * qFontSize * 1.25) > qMaxHeight && qFontSize > 10) {
+                qFontSize -= 1;
+                context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
+                qLines = getWrappedLines(context, qText, qMaxWidth);
             }
-        });
+            let qLH = qFontSize * 1.25;
+            let qSY = (h * 0.48) - (qLines.length * qLH / 2) + (qLH / 2);
+            qLines.forEach((line, i) => context.fillText(line, w * 0.5, qSY + (i * qLH)));
 
-        window.deleteSingle = async (id) => {
-            if(!confirm("Karte wirklich aus der Cloud löschen?")) return;
-            try {
-                await deleteDoc(doc(db, "users", MASTER_ID, "cards", id));
-            } catch (e) { alert("Löschen fehlgeschlagen."); }
+            // Antwort (Unten) - Auto Scaling
+            if (!hideAnswer && aText) {
+                const aMaxWidth = w * 0.75; let aFontSize = w * 0.045;
+                context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
+                while (context.measureText(aText).width > aMaxWidth && aFontSize > 8) {
+                    aFontSize -= 1;
+                    context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
+                }
+                context.fillText(aText, w * 0.5, h * 0.795);
+            }
         }
 
+        function getWrappedLines(context, text, maxWidth) {
+            if(!text) return [];
+            const words = text.split(' ');
+            let lines = [], currentLine = words[0];
+            for (let i = 1; i < words.length; i++) {
+                if (context.measureText(currentLine + " " + words[i]).width > maxWidth) {
+                    lines.push(currentLine); currentLine = words[i];
+                } else { currentLine += " " + words[i]; }
+            }
+            lines.push(currentLine); return lines;
+        }
+
+        questionInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
+        answerInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
+
+        document.getElementById('addToLibBtn').addEventListener('click', async () => {
+            const q = questionInput.value.trim(), a = answerInput.value.trim();
+            if (!q || !a) return alert("Pflichtfelder!");
+            const title = q.substring(0, 20).replace(/[^a-zA-Z0-9 ]/g, "") || "Karte";
+            await addDoc(collection(db, "users", MASTER_ID, "cards"), { title, question: q, answer: a, createdAt: new Date().toISOString() });
+            questionInput.value = ''; answerInput.value = ''; drawCanvas(ctx, '', '');
+        });
+
+        window.deleteSingle = async (id) => { if(confirm("Löschen?")) await deleteDoc(doc(db, "users", MASTER_ID, "cards", id)); }
         window.editSingle = (id) => {
             const card = currentCards.find(c => c.id === id);
             if(!card) return;
@@ -321,164 +312,91 @@
             document.getElementById('editAnswer').value = card.answer;
             document.getElementById('editModal').classList.remove('hidden');
         }
-
         window.saveEdit = async () => {
             const id = document.getElementById('editId').value;
-            try {
-                await updateDoc(doc(db, "users", MASTER_ID, "cards", id), {
-                    title: document.getElementById('editTitle').value,
-                    question: document.getElementById('editQuestion').value,
-                    answer: document.getElementById('editAnswer').value
-                });
-                document.getElementById('editModal').classList.add('hidden');
-            } catch (e) { alert("Update fehlgeschlagen."); }
-        }
-
-        // --- HILFSFUNKTIONEN ---
-        function drawCanvas(context, qText, aText, hideAnswer = false) {
-            if (!templateImage.complete) return;
-            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-            context.drawImage(templateImage, 0, 0);
-            context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#3e2c1c'; 
-            const w = context.canvas.width; const h = context.canvas.height;
-            const qFontSize = w * 0.05; 
-            context.font = `bold ${qFontSize}px "Roboto Slab", serif`;
-            wrapText(context, qText, w * 0.5, h * 0.48, w * 0.70, qFontSize * 1.3);
-            if (!hideAnswer) {
-                const aFontSize = w * 0.045; 
-                context.font = `bold ${aFontSize}px "Roboto Slab", serif`;
-                context.fillText(aText, w * 0.5, h * 0.795);
-            }
-        }
-
-        function wrapText(context, text, x, y, maxWidth, lineHeight) {
-            if(!text) return;
-            const words = text.split(' ');
-            let line = ''; let lines = [];
-            for(let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                if (context.measureText(testLine).width > maxWidth && n > 0) { lines.push(line); line = words[n] + ' '; }
-                else { line = testLine; }
-            }
-            lines.push(line);
-            let startY = y - (lines.length * lineHeight / 2) + (lineHeight / 2);
-            for(let k = 0; k < lines.length; k++) { context.fillText(lines[k], x, startY + (k * lineHeight)); }
-        }
-
-        questionInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
-        answerInput.addEventListener('input', () => drawCanvas(ctx, questionInput.value, answerInput.value));
-
-        // Spracherkennung
-        let recognition = null;
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
-        }
-        window.toggleDictation = (inputId, btn) => {
-            if (!recognition) return alert("Spracherkennung nicht unterstützt.");
-            btn.classList.add('mic-active');
-            recognition.start();
-            recognition.onresult = (e) => {
-                document.getElementById(inputId).value = e.results[0][0].transcript;
-                drawCanvas(ctx, questionInput.value, answerInput.value);
-            };
-            recognition.onend = () => btn.classList.remove('mic-active');
-        }
-
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            questionInput.value = ''; answerInput.value = ''; drawCanvas(ctx, '', '');
-        });
-        document.getElementById('copyBtn').addEventListener('click', () => {
-            canvas.toBlob(b => {
-                const item = new ClipboardItem({'image/png': b});
-                navigator.clipboard.write([item]).then(() => alert("Bild kopiert!"));
+            await updateDoc(doc(db, "users", MASTER_ID, "cards", id), {
+                title: document.getElementById('editTitle').value,
+                question: document.getElementById('editQuestion').value,
+                answer: document.getElementById('editAnswer').value
             });
-        });
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        window.toggleDictation = (inputId, btn) => {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return alert("Nicht unterstützt");
+            const rec = new SpeechRecognition(); rec.lang = 'de-DE';
+            btn.classList.add('mic-active'); rec.start();
+            rec.onresult = (e) => { document.getElementById(inputId).value = e.results[0][0].transcript; drawCanvas(ctx, questionInput.value, answerInput.value); };
+            rec.onend = () => btn.classList.remove('mic-active');
+        }
+
+        document.getElementById('resetBtn').onclick = () => { questionInput.value = ''; answerInput.value = ''; drawCanvas(ctx, '', ''); }
+        document.getElementById('copyBtn').onclick = () => canvas.toBlob(b => navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(()=>alert("Kopiert!")));
 
         // Slideshow
-        let slideshowDeck = [];
-        let currentSlideCard = null;
+        let ssDeck = []; let currentSS = null;
         const ssCanvas = document.getElementById('slideshowCanvas');
         const ssCtx = ssCanvas.getContext('2d');
-        const revealBtn = document.getElementById('revealBtn');
-        const nextSlideBtn = document.getElementById('nextSlideBtn');
-        const slideCounter = document.getElementById('slideCounter');
-        const slideshowEndMsg = document.getElementById('slideshowEndMsg');
-
         window.startSlideshow = () => {
-            if(currentCards.length === 0) return alert("Bibliothek ist leer.");
-            slideshowDeck = [...currentCards].sort(() => Math.random() - 0.5);
+            if(currentCards.length === 0) return;
+            ssDeck = [...currentCards].sort(() => Math.random() - 0.5);
             document.getElementById('slideshowModal').classList.remove('hidden');
-            slideshowEndMsg.classList.add('hidden');
             loadNextSlide();
         }
-
         function loadNextSlide() {
-            revealBtn.classList.remove('hidden'); nextSlideBtn.classList.add('hidden');
-            if (slideshowDeck.length === 0) {
+            document.getElementById('revealBtn').classList.remove('hidden');
+            document.getElementById('nextSlideBtn').classList.add('hidden');
+            if (ssDeck.length === 0) {
                 ssCtx.clearRect(0,0,ssCanvas.width, ssCanvas.height);
-                revealBtn.classList.add('hidden'); slideshowEndMsg.classList.remove('hidden'); slideCounter.textContent = "0";
+                document.getElementById('revealBtn').classList.add('hidden');
+                document.getElementById('slideshowEndMsg').classList.remove('hidden');
                 return;
             }
-            slideCounter.textContent = slideshowDeck.length;
-            currentSlideCard = slideshowDeck.pop();
-            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, true);
+            document.getElementById('slideCounter').textContent = ssDeck.length;
+            currentSS = ssDeck.pop();
+            drawCanvas(ssCtx, currentSS.question, currentSS.answer, true);
         }
-
-        revealBtn.addEventListener('click', () => {
-            drawCanvas(ssCtx, currentSlideCard.question, currentSlideCard.answer, false);
-            revealBtn.classList.add('hidden'); nextSlideBtn.classList.remove('hidden');
-        });
-        nextSlideBtn.addEventListener('click', loadNextSlide);
+        document.getElementById('revealBtn').onclick = () => {
+            drawCanvas(ssCtx, currentSS.question, currentSS.answer, false);
+            document.getElementById('revealBtn').classList.add('hidden');
+            document.getElementById('nextSlideBtn').classList.remove('hidden');
+        }
+        document.getElementById('nextSlideBtn').onclick = loadNextSlide;
         window.stopSlideshow = () => document.getElementById('slideshowModal').classList.add('hidden');
-        
+
         window.downloadSingle = (id) => {
              const card = currentCards.find(c => c.id === id);
              if(!card) return;
              drawCanvas(ctx, card.question, card.answer);
-             const link = document.createElement('a');
-             link.download = (card.title||'card')+'.png';
-             link.href = canvas.toDataURL('image/png');
-             link.click();
+             const link = document.createElement('a'); link.download = card.title+'.png';
+             link.href = canvas.toDataURL('image/png'); link.click();
              drawCanvas(ctx, questionInput.value, answerInput.value);
         }
 
-        // Excel Export / Import
         window.exportToExcel = () => {
-            const data = currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "QuizKarten");
-            XLSX.writeFile(wb, "Meine_Cloud_Karten.xlsx");
+            const ws = XLSX.utils.json_to_sheet(currentCards.map(c => ({ Titel: c.title, Frage: c.question, Antwort: c.answer })));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Quiz");
+            XLSX.writeFile(wb, "Cloud_Karten.xlsx");
         }
 
-        document.getElementById('excelInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        document.getElementById('excelInput').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = async function(e) {
-                const data = new Uint8Array(e.target.result);
+            reader.onload = async (ev) => {
+                const data = new Uint8Array(ev.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: ["title", "question", "answer"], range: 1}); 
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: ["title", "question", "answer"], range: 1}); 
                 const batch = writeBatch(db);
-                jsonData.forEach(row => {
+                json.forEach(row => {
                     if(row.question && row.answer) {
-                        const newRef = doc(collection(db, "users", MASTER_ID, "cards"));
-                        batch.set(newRef, {
-                            title: row.title || "Excel Import",
-                            question: row.question,
-                            answer: row.answer,
-                            createdAt: new Date().toISOString()
-                        });
+                        const ref = doc(collection(db, "users", MASTER_ID, "cards"));
+                        batch.set(ref, { title: row.title || "Import", question: row.question, answer: row.answer, createdAt: new Date().toISOString() });
                     }
                 });
-                await batch.commit();
-                alert("Import erfolgreich!");
+                await batch.commit(); alert("Fertig!");
             };
-            reader.readAsArrayBuffer(file);
-        });
-
+            reader.readAsArrayBuffer(e.target.files[0]);
+        }
     </script>
 </body>
 </html>
