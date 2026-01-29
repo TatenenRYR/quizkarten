@@ -1,21 +1,21 @@
-const CACHE_NAME = 'quiz-pro-v2'; // Version erhöht für Update
+const CACHE_NAME = 'quiz-pro-v2'; // WICHTIG: Version auf v2 ändern!
 const ASSETS = [
-  '/',              // Root-Verzeichnis hinzufügen
+  './',              // WICHTIG: Punkt-Schrägstrich für das aktuelle Verzeichnis
   'index.html',
-  'manifest.json',  // Manifest sollte auch in den Cache
+  'manifest.json',
   '1000133550-removebg-preview.png',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://fonts.googleapis.com/css2?family=Rye&family=Roboto+Slab:wght@700&display=swap',
-  // Hinweis: Google Fonts lädt oft weitere Dateien nach. 
-  // Für echtes Offline-Design müssten die Schriften lokal im Ordner liegen.
+  'https://fonts.googleapis.com/css2?family=Rye&family=Roboto+Slab:wght@700&display=swap'
 ];
 
 self.addEventListener('install', (e) => {
-  // forceUpdate: Der neue Service Worker wird sofort aktiv
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('Caching Assets...');
+      return cache.addAll(ASSETS);
+    })
   );
 });
 
