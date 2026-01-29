@@ -1,6 +1,7 @@
-const CACHE_NAME = 'quiz-pro-v2'; // WICHTIG: Version auf v2 ändern!
+const CACHE_NAME = 'quiz-pro-v3'; // Version erhöht für Refresh
+
 const ASSETS = [
-  './',              // WICHTIG: Punkt-Schrägstrich für das aktuelle Verzeichnis
+  './',
   'index.html',
   'manifest.json',
   '1000133550-removebg-preview.png',
@@ -9,18 +10,39 @@ const ASSETS = [
   'https://fonts.googleapis.com/css2?family=Rye&family=Roboto+Slab:wght@700&display=swap'
 ];
 
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('Caching Assets...');
-      return cache.addAll(ASSETS);
+// Installation: Alles in den Cache laden
+self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Erzwingt, dass der neue SW sofort aktiv wird
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      // Wir nutzen addAll, aber fangen Fehler ab, falls eine Datei fehlt
+      return cache.addAll(ASSETS).catch(err => console.error("Cache Error:", err));
     })
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then(res => res || fetch(e.request))
+// Aktivierung: Alte Caches löschen
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
+    })
+  );
+});
+
+// Fetch: Erst im Cache suchen, dann Netzwerk
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).catch(() => {
+        // Falls Netzwerkfehler und nicht im Cache (z.B. neue Bilder)
+        console.log("Offline und nicht im Cache:", event.request.url);
+      });
+    })
   );
 });
